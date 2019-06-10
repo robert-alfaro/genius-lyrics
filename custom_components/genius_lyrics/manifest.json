@@ -1,0 +1,8 @@
+{
+  "domain": "genius_lyrics",
+  "name": "Genius Lyrics",
+  "documentation": "https://homeassistant.io/components/genius_lyrics",
+  "requirements": ["lyricsgenius"],
+  "dependencies": [],
+  "codeowners": ["@ralfaro"]
+}
