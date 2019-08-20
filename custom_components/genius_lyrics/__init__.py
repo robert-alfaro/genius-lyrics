@@ -21,13 +21,6 @@ CONFIG_SCHEMA = vol.Schema({
     })
 }, extra=vol.ALLOW_EXTRA)
 
-SERVICE_SEARCH_LYRICS = "search_lyrics"
-SERVICE_SEARCH_LYRICS = vol.Schema({
-    vol.Required(ATTR_ARTIST_NAME): cv.string,
-    vol.Required(ATTR_SONG_TITLE): cv.string,
-    vol.Optional(CONF_ENTITY_ID): cv.entity_id,
-})
-
 
 def setup(hass, config):
     """setup is called when Home Assistant is loading our component."""
