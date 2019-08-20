@@ -1,7 +1,7 @@
 {
   "domain": "genius_lyrics",
   "name": "Genius Lyrics",
-  "documentation": "https://homeassistant.io/components/genius_lyrics",
+  "documentation": "https://github.com/robert-alfaro/genius-lyrics",
   "requirements": ["lyricsgenius"],
   "dependencies": [],
   "codeowners": ["@ralfaro"]
