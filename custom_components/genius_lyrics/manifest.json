@@ -4,5 +4,5 @@
   "documentation": "https://homeassistant.io/components/genius_lyrics",
   "requirements": ["lyricsgenius"],
   "dependencies": [],
-  "codeowners": ["@ralfaro"]
+  "codeowners": ["@ralfaro", "@airdrummingfool"]
 }
