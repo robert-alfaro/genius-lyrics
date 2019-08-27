@@ -42,12 +42,20 @@ def setup(hass, config):
         # get lyrics
         from lyricsgenius import Genius
         genius = Genius(genius_access_token)
-        song = genius.search_song(song, artist, get_full_info=False)
-        #_LOGGER.info("Song data: \n{}".format(song.to_dict()))
+        #_LOGGER.debug("Searching for lyrics with artist '{}' and title '{}'".format(artist, title))
+        song = genius.search_song(title, artist, get_full_info=False)
 
-        attrs = song.to_dict()
-        attrs['artist'] = artist.title()  # title case until we have a preformatted name
-        attrs['title'] = attrs['title']
+        if song is None:
+            #_LOGGER.debug("Song not found.")
+            attrs = {
+                'artist': artist.title(),  # title case until we have a preformatted name
+                'title' : title,
+                'lyrics': None
+            }
+        else:
+            #_LOGGER.debug("Song data: \n{}".format(song.to_dict()))
+            attrs = song.to_dict()
+            attrs['artist'] = artist.title()  # title case until we have a preformatted name
 
         if entity_id is not None:
             hass.states.set(entity_id, state, attrs)
