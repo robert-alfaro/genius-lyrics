@@ -30,7 +30,7 @@ def setup(hass, config):
         """Handle searching for a song's lyrics."""
         data = call.data
         artist = data[ATTR_ARTIST_NAME]
-        song = data[ATTR_SONG_TITLE]
+        title = data[ATTR_SONG_TITLE]
         entity_id = data.get(CONF_ENTITY_ID)
         state = data.get("state")
         old_state = hass.states.get(entity_id)
