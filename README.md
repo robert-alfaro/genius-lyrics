@@ -1,61 +1,61 @@
 # genius-lyrics
 
-This is a custom component for Home Assistant to allow fetching song lyrics from [Genius](https://genius.com).
-
-*NOTE:* this is a work in progress -- expect changes.
+Custom component for Home Assistant to allow fetching song lyrics from [Genius](https://genius.com).
 
 
 ## Installation
 
 ### With HACS
-1. Open HACS Settings and add this repository (https://github.com/robert-alfaro/genius-lyrics) as a Custom Repository (use **Integration** as the category).
-2. The `Genius Lyrics` page should automatically load (or find it in the HACS Store)
+1. Open HACS Settings and add this repository (https://github.com/robert-alfaro/genius-lyrics)
+as a Custom Repository (use **Integration** as the category).
+2. The `Genius Lyrics` page should automatically load (or find it in the HACS Store).
 3. Click `Install`
 
 ### Manual
-Copy the `genius_lyrics` directory from `custom_components` in this repository, and place inside your Home Assistant installation's `custom_components` directory.
+Copy the `genius_lyrics` directory from `custom_components` in this repository, and place inside your
+Home Assistant installation's `custom_components` directory.
 
 
 ## Setup
 
-1. Sign up for a free account at genius.com and authorize access to the [Genius API](http://genius.com/api-clients) to get your `client_access_token`.
-2. Install this component
-3. Install markdown card mod [lovelace-markdown-mod](https://github.com/thomasloven/lovelace-markdown-mod)
-4. Add the following to your `configuration.yaml`
+1. Create a Genius.com access token:
+	1. Sign up for a free account at [genius.com](https://genius.com) if you don't have one.
+	2. Open the [New API Client](https://genius.com/api-clients/new) page and fill in App Name, App Website URL,
+	   and Redirect URL (this won't be used).
+	3. Once you've saved the new client, click the button to generate a `Client Access Token` (record this somewhere safe).
+2. Install this integration
+3. Enable Genius Lyrics in `configuration.yaml` by adding the following (*substitute your access token from step 1*):
 
-```
-genius_lyrics:
-  access_token: "your Genius client access token"
+	```yaml
+	genius_lyrics:
+	  access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
+	```
 
-sensors:
-  - platform: template
-    sensors:
-      lyrics:
-        friendly_name: "Lyrics"
-        value_template: ""
-```
+4. Create a template sensor named `lyrics`:
 
-5. Create markdown card in lovelace.
+	```yaml
+	sensors:
+	  - platform: template
+	    sensors:
+	      lyrics:
+	        friendly_name: "Lyrics"
+	        value_template: ""
+	```
 
-```
-  - type: markdown
-    content: >
-      ## [[ sensor.lyrics.attributes.artist ]] - [[ sensor.lyrics.attributes.title ]]
+5. Create markdown card in lovelace:
 
-      [[ sensor.lyrics.attributes.lyrics ]]
-```
+    ```yaml
+      - type: markdown
+        content: >
+          ## {{ states.sensor.lyrics.attributes.artist }} - {{ states.sensor.lyrics.attributes.title }}
+
+          {{ states.sensor.lyrics.attributes.lyrics }}
+    ```
 
 6. Create an automation to call service `genius_lyrics.search_lyrics` upon media_player state change, providing "Artist", "Title".
 
----
 
-## Screenshot
-
-![lyrics-card](/lyrics-card.png)
-
----
-
-## Example service call JSON
+### Example service call JSON
 
 ```json
 {
@@ -65,8 +65,30 @@ sensors:
 }
 ```
 
+### Example automation YAML
+
+```yaml
+automation:
+  - alias: "Update Genius Lyrics when Spotify song changes."
+    trigger:
+      platform: template
+      value_template: "{{ states.media_player.spotify.attributes.media_title != states.sensor.genius_lyrics.attributes.title }}"
+    action:
+      - service: genius_lyrics.search_lyrics
+        data:
+          entity_id: sensor.lyrics
+        data_template:
+          artist_name: "{{ states.media_player.spotify.attributes.media_artist }}"
+          song_title: "{{ states.media_player.spotify.attributes.media_title }}"
+```
+
+---
+
+## Screenshot
+
+![lyrics-card](images/lyrics-card.png)
+
 ---
 
 Thanks to
  - @johnwmillr for `lyricsgenius` python package!
- - @thomasloven for lovelace `markdown-mod`!
