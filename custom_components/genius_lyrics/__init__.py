@@ -1,66 +1,108 @@
 """The Genius Lyrics integration."""
 
-import json
 import logging
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.const import CONF_ENTITY_ID, CONF_ACCESS_TOKEN
+from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.components.media_player import (
+    ATTR_MEDIA_ARTIST,
+    ATTR_MEDIA_TITLE,
+    DOMAIN as MEDIA_PLAYER_DOMAIN,
+)
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_ENTITIES,
+    CONF_ENTITY_ID,
+    EVENT_COMPONENT_LOADED,
+)
+from homeassistant.setup import ATTR_COMPONENT
+
+from .const import (
+    ATTR_MEDIA_LYRICS,
+    DOMAIN,
+    SERVICE_SEARCH_LYRICS,
+)
+
 
 _LOGGER = logging.getLogger(__name__)
 
 
-DOMAIN = 'genius_lyrics'
-
-ATTR_ARTIST_NAME = 'artist_name'
-ATTR_SONG_TITLE = 'song_title'
-
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
-        vol.Required(CONF_ACCESS_TOKEN): cv.string
+        vol.Required(CONF_ACCESS_TOKEN): cv.string,
+        vol.Optional(CONF_ENTITIES): vol.Any(cv.entity_ids, None),
     })
 }, extra=vol.ALLOW_EXTRA)
 
 
-def setup(hass, config):
-    """setup is called when Home Assistant is loading our component."""
+SERVICE_SCHEMA = vol.Schema({
+    DOMAIN: vol.Schema({
+        vol.Required(ATTR_MEDIA_ARTIST): cv.string,
+        vol.Required(ATTR_MEDIA_TITLE): cv.string,
+        vol.Required(CONF_ENTITY_ID): vol.Any(cv.entity_id, None),
+    })
+}, extra=vol.ALLOW_EXTRA)
+
+
+async def async_setup(hass, config):
+    """Setup is called when Home Assistant is loading our component."""
     genius_access_token = config[DOMAIN][CONF_ACCESS_TOKEN]
 
+    @callable
     def search_lyrics(call):
-        """Handle searching for a song's lyrics."""
+        """Handles searching song lyrics."""
         data = call.data
-        artist = data[ATTR_ARTIST_NAME]
-        title = data[ATTR_SONG_TITLE]
+        artist = data[ATTR_MEDIA_ARTIST]
+        title = data[ATTR_MEDIA_TITLE]
         entity_id = data.get(CONF_ENTITY_ID)
-        state = data.get("state")
+        state = data.get('state')
+
+        # validate entity_id
+        if hass.states.get(entity_id) is None:
+            _LOGGER.error(f"entity_id {entity_id} does not exist")
+            return False
+
+        # preserve entity's current state
         old_state = hass.states.get(entity_id)
         if old_state:
             attrs = old_state.attributes
         else:
             attrs = {}
 
-        # get lyrics
-        from lyricsgenius import Genius
-        genius = Genius(genius_access_token)
-        #_LOGGER.debug("Searching for lyrics with artist '{}' and title '{}'".format(artist, title))
-        song = genius.search_song(title, artist, get_full_info=False)
+        # fetch lyrics
+        from .sensor import GeniusLyrics
+        genius = GeniusLyrics(genius_access_token)
+        genius.fetch_lyrics(artist, title)
+        attrs.update({
+            ATTR_MEDIA_ARTIST: genius.artist,
+            ATTR_MEDIA_TITLE: genius.title,
+            ATTR_MEDIA_LYRICS: genius.lyrics,
+        })
 
-        if song is None:
-            #_LOGGER.debug("Song not found.")
-            attrs = {
-                'artist': artist.title(),  # title case until we have a preformatted name
-                'title' : title,
-                'lyrics': None
-            }
-        else:
-            #_LOGGER.debug("Song data: \n{}".format(song.to_dict()))
-            attrs = song.to_dict()
-            attrs['artist'] = artist.title()  # title case until we have a preformatted name
+        # set attributes
+        hass.states.async_set(entity_id, state, attrs)
 
-        if entity_id is not None:
-            hass.states.set(entity_id, state, attrs)
+    # register service
+    hass.services.async_register(DOMAIN, SERVICE_SEARCH_LYRICS, search_lyrics, SERVICE_SCHEMA)
 
-    hass.services.register(DOMAIN, 'search_lyrics', search_lyrics)
+    # load sensor platform after media_player component
+    async def load_sensors(event):
+        if event.data[ATTR_COMPONENT] != MEDIA_PLAYER_DOMAIN:
+            return
+
+        _LOGGER.info(f"{MEDIA_PLAYER_DOMAIN} is setup..loading sensors")
+
+        # setup platform(s)
+        sensor_config = {
+            CONF_ACCESS_TOKEN: genius_access_token,
+            CONF_ENTITIES: config[DOMAIN][CONF_ENTITIES]
+        }
+        hass.async_create_task(async_load_platform(hass, 'sensor', DOMAIN, sensor_config, config))
+
+    if config[DOMAIN][CONF_ENTITIES] is not None:
+        _LOGGER.info(f"Waiting for {MEDIA_PLAYER_DOMAIN} domain to load sensor(s)")
+        hass.bus.async_listen(EVENT_COMPONENT_LOADED, load_sensors)
 
     # Return boolean to indicate that initialization was successfully.
     return True

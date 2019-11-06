@@ -1,5 +1,4 @@
 ## Setup
-
 1. Create a Genius.com access token:
 	1. Sign up for a free account at [genius.com](https://genius.com) if you don't have one.
 	2. Open the [New API Client](https://genius.com/api-clients/new) page and fill in App Name, App Website URL,
@@ -9,57 +8,44 @@
 3. Enable Genius Lyrics in `configuration.yaml` by adding the following (*substitute your access token from step 1*):
 
 	```yaml
-	genius_lyrics:
-	  access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
+    genius_lyrics:
+      access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
+      entities:
+        - media_player.foobar
 	```
+    The above configuration will create a sensor entity `sensor.foobar_lyrics`.
 
-4. Create a template sensor named `lyrics`:
-
-	```yaml
-	sensors:
-	  - platform: template
-	    sensors:
-	      lyrics:
-	        friendly_name: "Lyrics"
-	        value_template: ""
-	```
-
-5. Create markdown card in lovelace:
+4. Create markdown card in lovelace:
 
     ```yaml
-      - type: markdown
-        content: >
-          ## {{ states.sensor.lyrics.attributes.artist }} - {{ states.sensor.lyrics.attributes.title }}
-
-          {{ states.sensor.lyrics.attributes.lyrics }}
+    card:
+      type: markdown
+      content: >-
+        ## {{ states.sensor.foobar_lyrics.attributes.media_artist }} - {{ states.sensor.foobar_lyrics.attributes.media_title }}
+    
+        {{ states.sensor.foobar_lyrics.attributes.media_lyrics }}
+    conditions:
+      - entity: sensor.foobar_lyrics
+        state: 'on'
+    type: conditional
     ```
 
-6. Create an automation to call service `genius_lyrics.search_lyrics` upon media_player state change, providing "Artist", "Title".
+    The above conditional lovelace card will hide when media_player is off.
 
 
-### Example service call JSON
-
+### Example service call
+##### JSON
 ```json
 {
- "artist_name":"Protoje",
- "song_title":"Mind of a King",
- "entity_id":"sensor.lyrics"
+ "media_artist":"Protoje",
+ "media_title":"Mind of a King",
+ "entity_id":"sensor.foobar_lyrics"
 }
 ```
 
-### Example automation YAML
-
+##### YAML
 ```yaml
-automation:
-  - alias: "Update Genius Lyrics when Spotify song changes."
-    trigger:
-      platform: template
-      value_template: "{{ states.media_player.spotify.attributes.media_title != states.sensor.genius_lyrics.attributes.title }}"
-    action:
-      - service: genius_lyrics.search_lyrics
-        data:
-          entity_id: sensor.lyrics
-        data_template:
-          artist_name: "{{ states.media_player.spotify.attributes.media_artist }}"
-          song_title: "{{ states.media_player.spotify.attributes.media_title }}"
+media_artist: "Protoje"
+media_title: "Mind of a King"
+entity_id: sensor.foobar_lyrics
 ```
