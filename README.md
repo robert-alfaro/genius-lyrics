@@ -37,19 +37,24 @@ Home Assistant installation's `custom_components` directory.
 4. Create markdown card in lovelace:
 
     ```yaml
-    card:
-      type: markdown
-      content: >-
-        ## {{ states.sensor.foobar_lyrics.attributes.media_artist }} - {{ states.sensor.foobar_lyrics.attributes.media_title }}
-    
-        {{ states.sensor.foobar_lyrics.attributes.media_lyrics }}
-    conditions:
-      - entity: sensor.foobar_lyrics
-        state: 'on'
-    type: conditional
+    type: vertical-stack
+    cards:
+      - type: media-control
+        entity: media_player.foobar
+      - type: conditional
+        conditions:
+          - entity: sensor.foobar_lyrics
+            state: 'on'
+        card:
+          type: markdown
+          content: >-
+            ## {{ states.sensor.foobar_lyrics.attributes.media_artist }} - {{ states.sensor.foobar_lyrics.attributes.media_title }}
+
+            {{ states.sensor.foobar_lyrics.attributes.media_lyrics }}
     ```
 
-    The above conditional lovelace card will hide when media_player is off.
+    The above lovelace card groups the media player and lyrics sensor together.
+    The conditional portion will hide the lyrics sensor when the media player is off.
 
 
 ### Example service call

@@ -2,16 +2,12 @@ search_lyrics:
   description: >
     Fetch song lyrics from Genius.com
   fields:
-    access_token:
-      description: Genius.com Access Token
-      example: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
+    entity_id:
+      description: Entity ID to write lyrics to.
+      example: sensor.foobar_lyrics
     media_artist:
       description: Name of the Artist
       example: Protoje
     media_title:
       description: Name of the Song.
       example: 'Mind of a King'
-    entity_id:
-      description: Entity ID to write lyrics to.
-      example: sensor.foobar_lyrics
-
