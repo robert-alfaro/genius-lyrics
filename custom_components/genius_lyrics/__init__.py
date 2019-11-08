@@ -8,15 +8,13 @@ from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.components.media_player import (
     ATTR_MEDIA_ARTIST,
     ATTR_MEDIA_TITLE,
-    DOMAIN as MEDIA_PLAYER_DOMAIN,
 )
 from homeassistant.const import (
     CONF_ACCESS_TOKEN,
     CONF_ENTITIES,
     CONF_ENTITY_ID,
-    EVENT_COMPONENT_LOADED,
+    EVENT_HOMEASSISTANT_START,
 )
-from homeassistant.setup import ATTR_COMPONENT
 
 from .const import (
     ATTR_MEDIA_LYRICS,
@@ -86,12 +84,11 @@ async def async_setup(hass, config):
     # register service
     hass.services.async_register(DOMAIN, SERVICE_SEARCH_LYRICS, search_lyrics, SERVICE_SCHEMA)
 
-    # load sensor platform after media_player component
+    # load sensor platform after Home Assistant is started.
+    # we need media_player component to be loaded, however, waiting for the
+    # media_player component alone may cause problems with entities not existing yet.
     async def load_sensors(event):
-        if event.data[ATTR_COMPONENT] != MEDIA_PLAYER_DOMAIN:
-            return
-
-        _LOGGER.info(f"{MEDIA_PLAYER_DOMAIN} is setup..loading sensors")
+        _LOGGER.info(f"Home Assistant is setup..loading sensors")
 
         # setup platform(s)
         sensor_config = {
@@ -101,8 +98,8 @@ async def async_setup(hass, config):
         hass.async_create_task(async_load_platform(hass, 'sensor', DOMAIN, sensor_config, config))
 
     if config[DOMAIN][CONF_ENTITIES] is not None:
-        _LOGGER.info(f"Waiting for {MEDIA_PLAYER_DOMAIN} domain to load sensor(s)")
-        hass.bus.async_listen(EVENT_COMPONENT_LOADED, load_sensors)
+        _LOGGER.info(f"Waiting for HomeAssistant to start before loading sensors")
+        hass.bus.async_listen(EVENT_HOMEASSISTANT_START, load_sensors)
 
     # Return boolean to indicate that initialization was successfully.
     return True
