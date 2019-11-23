@@ -200,6 +200,9 @@ class GeniusLyrics:
         if artist and title:
             self.__artist = artist
             self.__title = title
+        else:
+            _LOGGER.error("Missing artist and/or title")
+            return
 
         _LOGGER.info(f"Search lyrics for artist='{self.__artist}' and title='{self.__title}'")
 
