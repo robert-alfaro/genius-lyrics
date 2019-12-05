@@ -197,10 +197,12 @@ class GeniusLyrics:
         return self.__lyrics
 
     def fetch_lyrics(self, artist=None, title=None):
-        if artist and title:
+        if artist:
             self.__artist = artist
+        if title:
             self.__title = title
-        else:
+
+        if self.__artist is None or self.__title is None:
             _LOGGER.error("Missing artist and/or title")
             return
 
