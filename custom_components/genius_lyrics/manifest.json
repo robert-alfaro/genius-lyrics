@@ -4,5 +4,6 @@
   "documentation": "https://github.com/robert-alfaro/genius-lyrics",
   "requirements": ["lyricsgenius"],
   "dependencies": [],
-  "codeowners": ["@ralfaro", "@airdrummingfool"]
+  "codeowners": ["@ralfaro", "@airdrummingfool"],
+  "version": "0.0.1"
 }
