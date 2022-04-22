@@ -28,13 +28,14 @@ Home Assistant installation's `custom_components` directory.
 
 **NOTE: Media player `foobar` is just an example. Replace it with your media player's entity name.**
 
-	```yaml
-    genius_lyrics:
-      access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
-      entities:
-        - media_player.foobar
-	```
-    The above configuration will create a sensor entity `sensor.foobar_lyrics`.
+```yaml
+genius_lyrics:
+  access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
+  entities:
+	- media_player.foobar
+```
+
+The above configuration will create a sensor entity `sensor.foobar_lyrics`.
 
 4. Create markdown card in lovelace:
 
