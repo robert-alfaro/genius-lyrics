@@ -26,6 +26,8 @@ Home Assistant installation's `custom_components` directory.
 2. Install this integration
 3. Enable Genius Lyrics in `configuration.yaml` by adding the following (*substitute your access token from step 1*):
 
+**NOTE: Media player `foobar` is just an example. Replace it with your media player's entity name.**
+
 	```yaml
     genius_lyrics:
       access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
