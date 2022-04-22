@@ -101,7 +101,7 @@ class GeniusLyricsSensor(Entity):
         return self._state
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         state_attrs = {
             ATTR_MEDIA_ARTIST: self._genius.artist,
             ATTR_MEDIA_TITLE: self._genius.title,
