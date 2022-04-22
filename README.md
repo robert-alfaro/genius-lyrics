@@ -32,7 +32,7 @@ Home Assistant installation's `custom_components` directory.
 genius_lyrics:
   access_token: "3SxSxqZJOtz5fYlkFXv-12E-mgripD0XM7v0L091P3Kz22wT9ReCRNg0qmrYeveG"
   entities:
-	- media_player.foobar
+    - media_player.foobar
 ```
 
 The above configuration will create a sensor entity `sensor.foobar_lyrics`.
