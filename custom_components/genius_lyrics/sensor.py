@@ -13,6 +13,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_PLAYING,
     STATE_PAUSED,
+    STATE_BUFFERING,
 )
 from homeassistant.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
@@ -123,7 +124,7 @@ class GeniusLyricsSensor(Entity):
         if entity_id != self._media_player_id:
             return
 
-        if new_state.state not in [STATE_PLAYING, STATE_PAUSED]:
+        if new_state.state not in [STATE_PLAYING, STATE_PAUSED, STATE_BUFFERING]:
             self._genius.reset()
             self._state = STATE_OFF
             self.async_schedule_update_ha_state(True)
