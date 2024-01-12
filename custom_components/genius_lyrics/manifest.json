@@ -1,9 +1,12 @@
 {
   "domain": "genius_lyrics",
   "name": "Genius Lyrics",
+  "config_flow": true,
   "documentation": "https://github.com/robert-alfaro/genius-lyrics",
-  "requirements": ["lyricsgenius"],
+  "requirements": ["lyricsgenius==3.0.1"],
   "dependencies": [],
   "codeowners": ["@ralfaro", "@airdrummingfool"],
-  "version": "0.0.1"
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "version": "0.1.0"
 }
