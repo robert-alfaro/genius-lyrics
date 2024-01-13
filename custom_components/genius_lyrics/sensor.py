@@ -5,17 +5,21 @@ import logging
 import re
 import voluptuous as vol
 from lyricsgenius import Genius
+from requests.exceptions import Timeout, HTTPError
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import CoreState, HomeAssistant, State
+from homeassistant.core import CoreState, HomeAssistant, State, Event
 from homeassistant.config_entries import ConfigEntry
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.config_validation import entities_domain, split_entity_id
+from homeassistant.helpers.config_validation import split_entity_id
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import (
+    async_track_state_change,
+)
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.const import (
+    ATTR_RESTORED,
     CONF_ACCESS_TOKEN,
     CONF_ENTITIES,
     EVENT_HOMEASSISTANT_STARTED,
@@ -43,6 +47,8 @@ from .const import (
     CONF_MONITOR_ALL,
     DATA_GENIUS_CLIENT,
     DOMAIN,
+    FETCH_RETRIES,
+    INTEGRATION_NAME,
 )
 
 from .helpers import (
@@ -60,18 +66,15 @@ class GeniusLyricsSensor(SensorEntity):
     _attr_extra_state_attributes = {}
     _attr_should_poll = False
     _attr_has_entity_name = True
-    __state = STATE_OFF
     _attr_translation_key = "lyrics"
 
     def __init__(self, entry: ConfigEntry, media_entity_id) -> None:
         """Initialize the sensor."""
         self._entry = entry
-        self._genius = Genius("public", skip_non_songs=True)
+        self._genius = Genius("public", skip_non_songs=True, retries=FETCH_RETRIES)
         self._media_player_id = media_entity_id
 
         media_player_name = split_entity_id(media_entity_id)[1]
-        # cleaned_name = _media_player_name.split("_")
-        # cleaned_name = " ".join([str(s).capitalize() for s in cleaned_name])
         cleaned_name = media_player_name.replace("_", " ").capitalize()
         self._attr_name = f"{cleaned_name} lyrics"
 
@@ -172,7 +175,22 @@ class GeniusLyricsSensor(SensorEntity):
     def update(self):
         """Fetch new state data for the sensor."""
         if self.state == STATE_ON:
-            self._fetch_lyrics()
+            try:
+                self._fetch_lyrics()
+            except Timeout:
+                _LOGGER.error(
+                    f"Timeout fetching lyrics ({self._genius.retries} retries)"
+                )
+            except HTTPError as e:
+                _LOGGER.error(
+                    f"HTTP error fetching lyrics ({self._genius.retries} retries), err: {e.strerror}"
+                )
+            else:
+                return
+
+            # on exception only
+            self.reset()
+            # self.async_schedule_update_ha_state(True)
 
     async def handle_state_change(
         self, entity_id: str, old_state: State, new_state: State
@@ -183,16 +201,24 @@ class GeniusLyricsSensor(SensorEntity):
         if entity_id != self._media_player_id:
             return
 
+        if new_state is None:
+            _LOGGER.debug(
+                f"Detected removed or disabled entity: {entity_id}, new_state is None"
+            )
+            # do nothing...entity registry handler manages real changes
+            self.reset()
+            return
+
         # ensure a state containing necessary query inputs
         if new_state.state not in [STATE_PLAYING, STATE_PAUSED, STATE_BUFFERING]:
             self.reset()
-            self.async_schedule_update_ha_state(True)
+            # self.async_schedule_update_ha_state(True)
             return
 
         # bail if not playing music content type
         content_type = new_state.attributes.get(ATTR_MEDIA_CONTENT_TYPE)
         if content_type != MEDIA_TYPE_MUSIC:
-            _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
+            _LOGGER.debug(f"Ignoring non-music content type: {content_type}")
             return
 
         # TODO: need to check duration? new_state.attributes.get(ATTR_MEDIA_DURATION)
@@ -220,10 +246,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up Genius Lyrics sensor based on a config entry."""
 
-    startup_event = asyncio.Event()
-
     # on startup, entry setup is delayed until HA START event
     # otherwise, proceed immediately.
+    startup_event = asyncio.Event()
 
     async def startup_callback(event):
         _LOGGER.info("Home Assistant is started..loading sensors")
@@ -236,25 +261,19 @@ async def async_setup_entry(
 
     # SETUP ENTRY START
 
-    # genius_client = hass.data[DOMAIN][entry.entry_id][DATA_GENIUS_CLIENT]
+    monitor_all = entry.options[CONF_MONITOR_ALL]
 
-    if entry.data[CONF_MONITOR_ALL] is True:
+    if monitor_all is True:
         # get list of all media_player entities
         monitored_entities = hass.states.async_entity_ids(MP_DOMAIN)
     else:
         # get list of user-selected media_player entities
-        monitored_entities = entry.data[CONF_ENTITIES]
+        monitored_entities = entry.options[CONF_ENTITIES]
 
     # create sensors, one for each monitored entity
     sensors = []
     for media_player in monitored_entities:
-        _LOGGER.info(f"Creating sensor to monitor {media_player}")
-
-        # check if sensor already created?
-        entity_name = f"{split_entity_id(media_player)[1]}_lyrics"
-        if hass.states.get(entity_name) is not None:
-            _LOGGER.warning(f"Sensor already exists: {entity_name}")
-            continue
+        _LOGGER.debug(f"Creating sensor to monitor {media_player}")
 
         # create new sensor & hook up to media_player
         genius_sensor = GeniusLyricsSensor(entry, media_player)

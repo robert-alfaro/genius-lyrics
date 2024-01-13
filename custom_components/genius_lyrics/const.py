@@ -1,6 +1,6 @@
 """Constants for the Genius Lyrics integration."""
 
-TITLE = "Genius Lyrics"
+INTEGRATION_NAME = "Genius Lyrics"
 DOMAIN = "genius_lyrics"
 
 ATTRIBUTION = "Data provided by Genius.com"
@@ -15,3 +15,5 @@ SERVICE_SEARCH_LYRICS = "search_lyrics"
 CONF_MONITOR_ALL = "monitor_all"
 
 DATA_GENIUS_CLIENT = "genius_client"
+
+FETCH_RETRIES = 2  # total = n+1
