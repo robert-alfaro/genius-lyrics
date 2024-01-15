@@ -8,5 +8,5 @@
   "config_flow": true,
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "version": "0.1.0-beta1"
+  "version": "0.1.0"
 }
