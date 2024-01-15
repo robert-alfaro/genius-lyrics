@@ -4,7 +4,6 @@
             "user": {
                 "description": "Set up your Genius.com account to allow lyric search.",
                 "data": {
-                    "access_token": "[%key:common::config_flow::data::access_token%]",
                     "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
                 }
             },
@@ -13,10 +12,19 @@
             }
         },
         "error": {
-            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]"
         },
         "abort": {
             "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+        }
+    },
+    "options": {
+        "init": {
+            "data": {
+                "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
+            }
+        },
+        "select_entities": {
+            "description": "Select media players to monitor for lyrics."
         }
     }
 }
