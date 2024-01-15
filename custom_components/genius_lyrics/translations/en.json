@@ -4,7 +4,6 @@
             "user": {
                 "description": "Set up your Genius.com account to allow lyric search.",
                 "data": {
-                    "access_token": "Access Token",
                     "monitor_all": "Monitor All Media Player entities"
                 }
             },
@@ -13,10 +12,21 @@
             }
         },
         "error": {
-            "invalid_auth": "Invalid Access Token"
         },
         "abort": {
             "single_instance_allowed": "Only one instance of Genius Lyrics is allowed."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "monitor_all": "Monitor All Media Player entities"
+                }
+            },
+            "select_entities": {
+                "description": "Select media players to monitor for lyrics."
+            }
         }
     }
 }

@@ -3,10 +3,10 @@ search_lyrics:
     Fetch song lyrics from Genius.com
   fields:
     entity_id:
-      description: Entity ID to write lyrics to.
+      description: Sensor entity id to attach song data.
       example: sensor.foobar_lyrics
     media_artist:
-      description: Name of the Artist
+      description: Name of the Artist.
       example: Protoje
     media_title:
       description: Name of the Song.

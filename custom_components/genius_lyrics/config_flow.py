@@ -29,21 +29,48 @@ class GeniusLyricsOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage Genius Lyrics options."""
         if user_input is not None:
-            return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
+            # user select to monitor all media players?
+            if user_input[CONF_MONITOR_ALL] is True:
+                _LOGGER.info("User selected to monitor ALL %s entities", MP_DOMAIN)
+                return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
+
+            # otherwise, proceed to the next step to select specific entities
+            self._user_input = user_input
+            return await self.async_step_select_entities()
 
         # get stored options
         monitor_all = self.config_entry.options.get(CONF_MONITOR_ALL, True)
-        monitored_entities = self.config_entry.options.get(CONF_ENTITIES, [])
-
-        # Get all media_player entities
-        available_entities = self.hass.states.async_entity_ids(MP_DOMAIN)
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Optional(CONF_MONITOR_ALL, default=monitor_all): cv.boolean,
-                    vol.Optional(
+                }
+            ),
+        )
+
+    async def async_step_select_entities(self, user_input=None):
+        """Handle selecting specific entities."""
+
+        if isinstance(user_input, dict) and user_input.get(CONF_ENTITIES):
+            # combine the user input from both steps
+            user_input.update(self._user_input)
+
+            _LOGGER.info("User selected to monitor SPECIFIC %s entities", MP_DOMAIN)
+            return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
+
+        # get stored options
+        monitored_entities = self.config_entry.options.get(CONF_ENTITIES, [])
+
+        # get all available media_player entities
+        available_entities = self.hass.states.async_entity_ids(MP_DOMAIN)
+
+        return self.async_show_form(
+            step_id="select_entities",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
                         CONF_ENTITIES,
                         default=monitored_entities,
                     ): cv.multi_select(available_entities),
@@ -69,17 +96,10 @@ class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
-        # if self._async_current_entries():
-        #     return self.async_abort(reason="single_instance_allowed")
-
         if user_input is not None:
-            # set unique id per account access token
-            # unique_id = user_input[CONF_ACCESS_TOKEN].lower()
-
             # user select to monitor all media players?
             if user_input[CONF_MONITOR_ALL] is True:
                 _LOGGER.info("User selected to monitor ALL %s entities", MP_DOMAIN)
-                # user_input[CONF_ENTITIES] = self.hass.states.async_entity_ids(MP_DOMAIN)
                 return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
 
             # otherwise, proceed to the next step to select specific entities
@@ -90,7 +110,6 @@ class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    # vol.Required(CONF_ACCESS_TOKEN): cv.string,
                     vol.Optional(CONF_MONITOR_ALL, default=True): cv.boolean,
                 }
             ),
@@ -100,13 +119,13 @@ class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle selecting specific entities."""
 
         if isinstance(user_input, dict) and user_input.get(CONF_ENTITIES):
-            # Combine the user input from both steps
+            # combine the user input from both steps
             user_input.update(self._user_input)
 
             _LOGGER.info("User selected to monitor SPECIFIC %s entities", MP_DOMAIN)
             return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
 
-        # Get all available media_player entities
+        # get all available media_player entities
         available_entities = self.hass.states.async_entity_ids(MP_DOMAIN)
 
         return self.async_show_form(
