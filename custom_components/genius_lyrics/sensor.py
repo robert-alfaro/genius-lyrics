@@ -50,10 +50,7 @@ from .const import (
     FETCH_RETRIES,
     INTEGRATION_NAME,
 )
-
-from .helpers import (
-    entities_exist,
-)
+from .helpers import cleanup_lyrics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,24 +130,9 @@ class GeniusLyricsSensor(SensorEntity):
             )
 
             self._media_title = song.title
-            lyrics = song.lyrics
 
-            # HACK: clean up results
-
-            # Pattern1: match digits at beginning followed by "Contributors" and text followed by "Lyrics"
-            pattern1 = re.compile(r"^(\d+) Contributors(.*?) Lyrics")
-            match = pattern1.match(song.lyrics)
-            if match:
-                # Remove the matched patterns from the original text
-                lyrics = lyrics.replace(match.group(0), "")
-
-            # Pattern2: match ending with "Embed"
-            lyrics = lyrics.rstrip("Embed")
-
-            # Pattern3: match ending with Pyong Count
-            lyrics = lyrics.rstrip(str(song.pyongs_count))
-
-            # end HACK
+            # hack cleanup of lyrics to remove erroneous text
+            lyrics = cleanup_lyrics(song)
 
             self._attr_extra_state_attributes[ATTR_MEDIA_LYRICS] = lyrics
             self._attr_extra_state_attributes[ATTR_MEDIA_STATS_HOT] = song.stats.hot

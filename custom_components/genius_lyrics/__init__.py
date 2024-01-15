@@ -46,7 +46,7 @@ from .const import (
     SERVICE_SEARCH_LYRICS,
     INTEGRATION_NAME,
 )
-
+from .helpers import cleanup_lyrics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -230,11 +230,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         song = await hass.async_add_executor_job(fetch_lyrics)
         if song:
+            lyrics = cleanup_lyrics(song)
             attrs.update(
                 {
                     ATTR_MEDIA_ARTIST: song.artist,
                     ATTR_MEDIA_TITLE: song.title,
-                    ATTR_MEDIA_LYRICS: song.lyrics,
+                    ATTR_MEDIA_LYRICS: lyrics,
                     ATTR_MEDIA_IMAGE: song.song_art_image_url,
                     ATTR_MEDIA_PYONG_COUNT: song.pyongs_count,
                     ATTR_MEDIA_STATS_HOT: song.stats.hot,
