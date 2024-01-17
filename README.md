@@ -53,6 +53,8 @@ Home Assistant installation's `custom_components` directory.
 
 ### Example service call
 
+Service optionally accepts `entity_id`. Returns response when omitted, otherwise updates sensor entity attributes.
+
 ##### JSON
 
 ```json
