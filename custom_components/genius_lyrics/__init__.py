@@ -105,16 +105,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if monitor_all is True:
                 _LOGGER.debug(f"New {MP_DOMAIN} detected: {entity_name}, reloading...")
                 await async_reload_entry(hass, entry)
+                sensor_url = (
+                    f"{get_url(hass)}/config/entities?config_entry={entry.entry_id}"
+                )
+                notify_link = f"Auto-configured {sensor_entity_id}, <a href='{sensor_url}'>Check it out</a>."
             else:
                 _LOGGER.debug(f"Ignoring new {MP_DOMAIN}: {entity_name}")
                 integration_url = (
                     f"{get_url(hass)}/config/integrations/integration/{DOMAIN}"
                 )
-                await notify_user(
-                    hass,
-                    f"Detected new media player! "
-                    f"<a href='{integration_url}'>Configure</a> {entity_id}.",
-                )
+                notify_link = f"<a href='{integration_url}'>Configure</a> {entity_id}."
+
+            await notify_user(
+                hass,
+                f"Detected new media player! {notify_link}",
+            )
 
         elif action == "remove":
             # remove sensor for a monitored media_player entity
@@ -159,15 +164,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # adjust sensor enabled state per monitored media_player enabled state
             mp_entry = registry.async_get(entity_id)
             if mp_entry and (monitor_all is True or entity_id in monitored_entities):
-                _LOGGER.info(
-                    f"Auto-{'disabling' if mp_entry.disabled else 'enabling'} sensor per {entity_id}"
-                )
-                registry.async_update_entity(
-                    sensor_entity_id,
-                    disabled_by=RegistryEntryDisabler.INTEGRATION
-                    if mp_entry.disabled
-                    else None,
-                )
+                # only update entity when disabled statuses differs
+                sensor_entry = registry.async_get(sensor_entity_id)
+                if sensor_entry is not None and (
+                    sensor_entry.disabled != mp_entry.disabled
+                ):
+                    _LOGGER.info(
+                        f"Auto-{'disabling' if mp_entry.disabled else 'enabling'} sensor per {entity_id}"
+                    )
+                    registry.async_update_entity(
+                        sensor_entity_id,
+                        disabled_by=RegistryEntryDisabler.INTEGRATION
+                        if mp_entry.disabled
+                        else None,
+                    )
 
     hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED, handle_entity_registry_update)
 
