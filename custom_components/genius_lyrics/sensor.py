@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from lyricsgenius import Genius
+# from lyricsgenius import Genius
 from requests.exceptions import HTTPError, Timeout
 
 from homeassistant.components.media_player import (
@@ -40,6 +40,7 @@ from .const import (
     DOMAIN,
     FETCH_RETRIES,
 )
+from .genius import GeniusPatched
 from .helpers import cleanup_lyrics, get_media_player_entities
 
 _LOGGER = logging.getLogger(__name__)
@@ -58,7 +59,9 @@ class GeniusLyricsSensor(SensorEntity):
     def __init__(self, entry: ConfigEntry, media_entity_id) -> None:
         """Initialize the sensor."""
         self._entry = entry
-        self._genius = Genius("public", skip_non_songs=True, retries=FETCH_RETRIES)
+        self._genius = GeniusPatched(
+            "public", skip_non_songs=True, retries=FETCH_RETRIES
+        )
         self._media_player_id = media_entity_id
 
         media_player_name = split_entity_id(media_entity_id)[1]

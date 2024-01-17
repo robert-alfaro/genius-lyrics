@@ -4,7 +4,6 @@ from functools import partial
 import logging
 from typing import Optional
 
-from lyricsgenius import Genius
 import voluptuous as vol
 
 from homeassistant.components.media_player import ATTR_MEDIA_ARTIST, ATTR_MEDIA_TITLE
@@ -27,6 +26,7 @@ from .const import (
     FETCH_RETRIES,
     SERVICE_SEARCH_LYRICS,
 )
+from .genius import GeniusPatched
 from .helpers import cleanup_lyrics
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ SERVICE_SEARCH_LYRICS_SCHEMA = vol.Schema(
 
 
 async def search_lyrics(
-    call: ServiceCall, *, hass: HomeAssistant, genius: Genius
+    call: ServiceCall, *, hass: HomeAssistant, genius: GeniusPatched
 ) -> Optional[ServiceResponse]:
     """Service call to handle searching song lyrics."""
     data = call.data
@@ -111,7 +111,7 @@ async def search_lyrics(
 def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for the Genius Lyrics integration."""
     # client is shared amongst services
-    client = Genius("public", skip_non_songs=True, retries=FETCH_RETRIES)
+    client = GeniusPatched("public", skip_non_songs=True, retries=FETCH_RETRIES)
 
     hass.services.async_register(
         DOMAIN,
