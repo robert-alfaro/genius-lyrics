@@ -1,12 +1,13 @@
 """Helpers for the Genius Lyrics integration."""
 
 import logging
-from lyricsgenius.song import Song
 from re import compile as re_compile
 
-from homeassistant.core import HomeAssistant
-from homeassistant.const import ATTR_RESTORED
+from lyricsgenius.song import Song
+
 from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
+from homeassistant.const import ATTR_RESTORED
+from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
