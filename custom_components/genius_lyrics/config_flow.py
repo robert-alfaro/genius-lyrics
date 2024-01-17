@@ -1,26 +1,76 @@
-"""Config flow for Genius Lyrics."""
+"""Config flow for Genius Lyrics integration."""
 
 import logging
-from typing import Any
+from typing import Any, Union
 
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_ENTITIES
+from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.const import CONF_ENTITIES
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
+from homeassistant.helpers import config_validation as cv
 
 from .const import CONF_MONITOR_ALL, DOMAIN, INTEGRATION_NAME
+from .helpers import get_media_player_entities
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class GeniusLyricsOptionsFlowHandler(config_entries.OptionsFlow):
+def _initial_form(flow: Union[ConfigFlow, OptionsFlow]):
+    """Return flow form for init/user step id."""
+    if isinstance(flow, ConfigFlow):
+        step_id = "user"
+        monitor_all = True
+    elif isinstance(flow, OptionsFlow):
+        step_id = "init"
+        monitor_all = flow.config_entry.options.get(CONF_MONITOR_ALL, True)
+    else:
+        raise TypeError("Invalid flow type")
+
+    return flow.async_show_form(
+        step_id=step_id,  # parameterized to follow guidance on using "user"
+        data_schema=vol.Schema(
+            {
+                vol.Optional(CONF_MONITOR_ALL, default=monitor_all): cv.boolean,
+            }
+        ),
+        # TODO: would be nice to dynamically adjust per checkbox value on form
+        last_step=False,
+    )
+
+
+def _select_entities_form(flow: Union[ConfigFlow, OptionsFlow]):
+    """Return flow form for select_entities step id."""
+    if isinstance(flow, ConfigFlow):
+        monitored_entities = []
+    elif isinstance(flow, OptionsFlow):
+        monitored_entities = flow.config_entry.options.get(CONF_ENTITIES, [])
+    else:
+        raise TypeError("Invalid flow type")
+
+    # get all available media_player entities
+    available_entities = get_media_player_entities(flow.hass)
+
+    return flow.async_show_form(
+        step_id="select_entities",
+        data_schema=vol.Schema(
+            {
+                vol.Required(
+                    CONF_ENTITIES,
+                    default=monitored_entities,
+                ): cv.multi_select(available_entities),
+            }
+        ),
+        last_step=True,
+    )
+
+
+class GeniusLyricsOptionsFlowHandler(OptionsFlow):
     """Handle Genius Lyrics options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize Genius Lyrics options flow."""
         self.config_entry = config_entry
 
@@ -38,17 +88,7 @@ class GeniusLyricsOptionsFlowHandler(config_entries.OptionsFlow):
             self._user_input = user_input
             return await self.async_step_select_entities()
 
-        # get stored options
-        monitor_all = self.config_entry.options.get(CONF_MONITOR_ALL, True)
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(CONF_MONITOR_ALL, default=monitor_all): cv.boolean,
-                }
-            ),
-        )
+        return _initial_form(self)
 
     async def async_step_select_entities(self, user_input=None):
         """Handle selecting specific entities."""
@@ -60,32 +100,16 @@ class GeniusLyricsOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.info("User selected to monitor SPECIFIC %s entities", MP_DOMAIN)
             return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
 
-        # get stored options
-        monitored_entities = self.config_entry.options.get(CONF_ENTITIES, [])
-
-        # get all available media_player entities
-        available_entities = self.hass.states.async_entity_ids(MP_DOMAIN)
-
-        return self.async_show_form(
-            step_id="select_entities",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ENTITIES,
-                        default=monitored_entities,
-                    ): cv.multi_select(available_entities),
-                }
-            ),
-        )
+        return _select_entities_form(self)
 
 
-class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class GeniusLyricsFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a Genius Lyrics config flow."""
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        config_entry: ConfigEntry,
     ) -> GeniusLyricsOptionsFlowHandler:
         """Get the options flow for this handler."""
         return GeniusLyricsOptionsFlowHandler(config_entry)
@@ -106,14 +130,7 @@ class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._user_input = user_input
             return await self.async_step_select_entities()
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(CONF_MONITOR_ALL, default=True): cv.boolean,
-                }
-            ),
-        )
+        return _initial_form(self)
 
     async def async_step_select_entities(self, user_input=None):
         """Handle selecting specific entities."""
@@ -125,14 +142,4 @@ class GeniusLyricsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.info("User selected to monitor SPECIFIC %s entities", MP_DOMAIN)
             return self.async_create_entry(title=INTEGRATION_NAME, data=user_input)
 
-        # get all available media_player entities
-        available_entities = self.hass.states.async_entity_ids(MP_DOMAIN)
-
-        return self.async_show_form(
-            step_id="select_entities",
-            data_schema=vol.Schema(
-                {
-                    CONF_ENTITIES: cv.multi_select(available_entities),
-                }
-            ),
-        )
+        return _select_entities_form(self)

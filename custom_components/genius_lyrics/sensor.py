@@ -1,56 +1,46 @@
-"""Sensor platform for the Genius Lyrics integration."""
+"""Support for Genius Lyrics sensors."""
 
 import asyncio
 import logging
-import re
-import voluptuous as vol
-from lyricsgenius import Genius
-from requests.exceptions import Timeout, HTTPError
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import CoreState, HomeAssistant, State, Event
-from homeassistant.config_entries import ConfigEntry
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.config_validation import split_entity_id
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (
-    async_track_state_change,
-)
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.const import (
-    ATTR_RESTORED,
-    CONF_ACCESS_TOKEN,
-    CONF_ENTITIES,
-    EVENT_HOMEASSISTANT_STARTED,
-    STATE_ON,
-    STATE_OFF,
-    STATE_PLAYING,
-    STATE_PAUSED,
-    STATE_BUFFERING,
-)
+from lyricsgenius import Genius
+from requests.exceptions import HTTPError, Timeout
+
 from homeassistant.components.media_player import (
-    ATTR_MEDIA_CONTENT_TYPE,
-    ATTR_MEDIA_DURATION,
-    ATTR_MEDIA_TITLE,
     ATTR_MEDIA_ARTIST,
+    ATTR_MEDIA_CONTENT_TYPE,
+    # ATTR_MEDIA_DURATION,
+    ATTR_MEDIA_TITLE,
     DOMAIN as MP_DOMAIN,
 )
 from homeassistant.components.media_player.const import MEDIA_TYPE_MUSIC
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONF_ENTITIES,
+    EVENT_HOMEASSISTANT_STARTED,
+    STATE_BUFFERING,
+    STATE_OFF,
+    STATE_ON,
+    STATE_PAUSED,
+    STATE_PLAYING,
+)
+from homeassistant.core import CoreState, HomeAssistant, State
+from homeassistant.helpers.config_validation import split_entity_id
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change
 
 from .const import (
-    ATTRIBUTION,
-    ATTR_MEDIA_LYRICS,
     ATTR_MEDIA_IMAGE,
+    ATTR_MEDIA_LYRICS,
     ATTR_MEDIA_PYONG_COUNT,
     ATTR_MEDIA_STATS_HOT,
+    ATTRIBUTION,
     CONF_MONITOR_ALL,
-    DATA_GENIUS_CLIENT,
     DOMAIN,
     FETCH_RETRIES,
-    INTEGRATION_NAME,
 )
-from .helpers import cleanup_lyrics
+from .helpers import cleanup_lyrics, get_media_player_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,11 +74,10 @@ class GeniusLyricsSensor(SensorEntity):
             ]
         )
 
-        self.reset()
-
+        self.reset(update=False)
         _LOGGER.info("Created sensor: %s", self._attr_name)
 
-    def reset(self):
+    def reset(self, update=True):
         """Reset sensor state and attributes."""
         self._media_artist = None
         self._media_title = None
@@ -101,13 +90,15 @@ class GeniusLyricsSensor(SensorEntity):
         self._attr_extra_state_attributes[ATTR_MEDIA_PYONG_COUNT] = None
         self._attr_extra_state_attributes[ATTR_MEDIA_STATS_HOT] = None
         _LOGGER.debug("Sensor data is now reset")
+        if update:
+            self.async_schedule_update_ha_state(True)
 
     @property
     def state(self):
         """Return the state of the sensor."""
         return self._state
 
-    def _fetch_lyrics(self):
+    def _fetch_lyrics(self) -> bool:
         if self._media_artist is None or self._media_title is None:
             _LOGGER.error("Cannot fetch lyrics without artist and title")
             return
@@ -172,7 +163,6 @@ class GeniusLyricsSensor(SensorEntity):
 
             # on exception only
             self.reset()
-            # self.async_schedule_update_ha_state(True)
 
     async def handle_state_change(
         self, entity_id: str, old_state: State, new_state: State
@@ -194,13 +184,12 @@ class GeniusLyricsSensor(SensorEntity):
         # ensure a state containing necessary query inputs
         if new_state.state not in [STATE_PLAYING, STATE_PAUSED, STATE_BUFFERING]:
             self.reset()
-            # self.async_schedule_update_ha_state(True)
             return
 
         # bail if not playing music content type
         content_type = new_state.attributes.get(ATTR_MEDIA_CONTENT_TYPE)
         if content_type != MEDIA_TYPE_MUSIC:
-            _LOGGER.debug(f"Ignoring non-music content type: {content_type}")
+            _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
             return
 
         # TODO: need to check duration? new_state.attributes.get(ATTR_MEDIA_DURATION)
@@ -217,7 +206,7 @@ class GeniusLyricsSensor(SensorEntity):
         self._attr_entity_picture = None
         self._state = STATE_ON
 
-        # trigger update
+        # trigger search via update
         self.async_schedule_update_ha_state(True)
 
 
@@ -247,7 +236,7 @@ async def async_setup_entry(
 
     if monitor_all is True:
         # get list of all media_player entities
-        monitored_entities = hass.states.async_entity_ids(MP_DOMAIN)
+        monitored_entities = get_media_player_entities(hass)
     else:
         # get list of user-selected media_player entities
         monitored_entities = entry.options[CONF_ENTITIES]

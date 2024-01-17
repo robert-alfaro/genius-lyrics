@@ -1,55 +1,28 @@
 """The Genius Lyrics integration."""
 
 import logging
+
 import voluptuous as vol
 
-from lyricsgenius import Genius
-from requests.exceptions import HTTPError
-
-from homeassistant.core import Event, HomeAssistant, ServiceCall
+from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_RESTORED, CONF_ACCESS_TOKEN, CONF_ENTITIES
+from homeassistant.core import Event, HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.config_validation import split_entity_id
 import homeassistant.helpers.entity_registry as er
-from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
+from homeassistant.helpers.entity_registry import (
+    EVENT_ENTITY_REGISTRY_UPDATED,
+    RegistryEntryDisabler,
+)
 from homeassistant.helpers.network import get_url
-from homeassistant.exceptions import (
-    ConfigEntryAuthFailed,
-    ConfigEntryError,
-    ConfigEntryNotReady,
-)
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.components.media_player import (
-    ATTR_MEDIA_ARTIST,
-    ATTR_MEDIA_TITLE,
-    DOMAIN as MP_DOMAIN,
-)
-from homeassistant.const import (
-    ATTR_RESTORED,
-    CONF_ACCESS_TOKEN,
-    CONF_ENTITIES,
-    CONF_ENTITY_ID,
-    EVENT_HOMEASSISTANT_START,
-    STATE_ON,
-    STATE_OFF,
-)
 
-from .const import (
-    ATTR_MEDIA_LYRICS,
-    ATTR_MEDIA_IMAGE,
-    ATTR_MEDIA_PYONG_COUNT,
-    ATTR_MEDIA_STATS_HOT,
-    CONF_MONITOR_ALL,
-    DATA_GENIUS_CLIENT,
-    DOMAIN,
-    FETCH_RETRIES,
-    SERVICE_SEARCH_LYRICS,
-    INTEGRATION_NAME,
-)
-from .helpers import cleanup_lyrics
+from .const import CONF_MONITOR_ALL, DOMAIN, INTEGRATION_NAME
+from .helpers import get_media_player_entities
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
-
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -57,20 +30,6 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Required(CONF_ACCESS_TOKEN): cv.string,
                 vol.Optional(CONF_ENTITIES): vol.Any(cv.entity_ids, None),
-            }
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
-
-
-SERVICE_SEARCH_LYRICS_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.Schema(
-            {
-                vol.Required(ATTR_MEDIA_ARTIST): cv.string,
-                vol.Required(ATTR_MEDIA_TITLE): cv.string,
-                vol.Required(CONF_ENTITY_ID): vol.Any(cv.entity_id, None),
             }
         )
     },
@@ -97,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         monitor_all = entry.data[CONF_MONITOR_ALL]
 
     if monitor_all is True:
-        monitored_entities = hass.states.async_entity_ids(MP_DOMAIN)
+        monitored_entities = get_media_player_entities(hass)
         user_selected_entities = []
     else:
         user_selected_entities = (
@@ -136,7 +95,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if entity_domain != MP_DOMAIN:
             return
 
+        sensor_entity_id = f"sensor.{entity_name}_lyrics"
+        registry = er.async_get(hass)
         action = event.data["action"]
+
         if action == "create":
             # trigger reload if monitoring all media_player entities
             # otherwise, issue notification about event.
@@ -157,8 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         elif action == "remove":
             # remove sensor for a monitored media_player entity
             if monitor_all is True or entity_id in monitored_entities:
-                _LOGGER.debug(f"Removing sensor for {entity_id}")
-                sensor_entity_id = f"sensor.{entity_name}_lyrics"
+                _LOGGER.info(f"Removing sensor for {entity_id}")
 
                 registry = er.async_get(hass)
                 try:
@@ -172,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     if hass.states.async_remove(
                         sensor_entity_id, context=event.context
                     ):
-                        _LOGGER.warning(
+                        _LOGGER.debug(
                             f"Successfully removed restored entity: {sensor_entity_id}"
                         )
                     else:
@@ -194,65 +155,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 # trigger reload
                 await async_reload_entry(hass, entry)
 
+        elif action == "update":
+            # adjust sensor enabled state per monitored media_player enabled state
+            mp_entry = registry.async_get(entity_id)
+            if mp_entry and (monitor_all is True or entity_id in monitored_entities):
+                _LOGGER.info(
+                    f"Auto-{'disabling' if mp_entry.disabled else 'enabling'} sensor per {entity_id}"
+                )
+                registry.async_update_entity(
+                    sensor_entity_id,
+                    disabled_by=RegistryEntryDisabler.INTEGRATION
+                    if mp_entry.disabled
+                    else None,
+                )
+
     hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED, handle_entity_registry_update)
 
-    # set up service(s)
-
-    # create shared client for services
-    genius_client = Genius("public", skip_non_songs=True, retries=FETCH_RETRIES)
-
-    async def search_lyrics(call: ServiceCall) -> None:
-        """Service call to handle searching song lyrics."""
-        data = call.data
-        artist = data.get(ATTR_MEDIA_ARTIST)
-        title = data.get(ATTR_MEDIA_TITLE)
-        entity_id = data.get(CONF_ENTITY_ID)
-
-        # validate inputs
-        if hass.states.get(entity_id) is None:
-            _LOGGER.error(f"entity_id {entity_id} does not exist")
-            return
-
-        if artist is None or title is None:
-            _LOGGER.error("Must provide both artist and title")
-            return
-
-        # preserve entity's current state
-        old_state = hass.states.get(entity_id)
-        if old_state:
-            attrs = dict(old_state.attributes)
-        else:
-            attrs = {}
-
-        # perform fetch
-        def fetch_lyrics():
-            return genius_client.search_song(title, artist, get_full_info=False)
-
-        song = await hass.async_add_executor_job(fetch_lyrics)
-        if song:
-            lyrics = cleanup_lyrics(song)
-            attrs.update(
-                {
-                    ATTR_MEDIA_ARTIST: song.artist,
-                    ATTR_MEDIA_TITLE: song.title,
-                    ATTR_MEDIA_LYRICS: lyrics,
-                    ATTR_MEDIA_IMAGE: song.song_art_image_url,
-                    ATTR_MEDIA_PYONG_COUNT: song.pyongs_count,
-                    ATTR_MEDIA_STATS_HOT: song.stats.hot,
-                }
-            )
-
-            # set media attributes on entity
-            hass.states.async_set(entity_id, STATE_ON, attrs)
-        else:
-            _LOGGER.error(f"No lyrics found for '{artist} - {title}'")
-
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_SEARCH_LYRICS,
-        search_lyrics,
-        schema=SERVICE_SEARCH_LYRICS_SCHEMA,
-    )
+    # set up services
+    async_setup_services(hass)
 
     return True
 

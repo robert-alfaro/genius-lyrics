@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "description": "Set up your Genius.com account to allow lyric search.",
+                "description": "Set up Genius.com to allow song lyrics search.",
                 "data": {
                     "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
                 }
@@ -11,10 +11,8 @@
                 "description": "Select media players to monitor for lyrics."
             }
         },
-        "error": {
-        },
         "abort": {
-            "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+            "already_configured": "[%key:common::config_flow::abort::already_configured%]"
         }
     },
     "options": {
