@@ -103,6 +103,10 @@ class GeniusLyricsSensor(SensorEntity):
             _LOGGER.error("Cannot fetch lyrics without artist and title")
             return
 
+        # remove hyphen from title
+        if " - " in self._media_title:
+           self._media_title = self._media_title.split(' - ',1)[0] # remove anything after the ' - '
+           
         _LOGGER.info(
             "Searching lyrics for artist='%s' and title='%s'",
             self._media_artist,
