@@ -3,6 +3,7 @@
 import logging
 from lyricsgenius.song import Song
 from re import compile as re_compile
+from re import sub as re_sub
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import ATTR_RESTORED
@@ -26,6 +27,14 @@ def cleanup_lyrics(song: Song) -> str:
 
     # Pattern3: match ending with Pyong Count
     lyrics = lyrics.rstrip(str(song.pyongs_count))
+    
+    # Pattern4: remove 'You might also like'
+    lyrics = lyrics.replace("You might also like[","[")
+    
+    # Pattern5: remove live ticket advertising
+    deletetxt = "See " + song.artist + " LiveGet tickets as low as "
+    lyrics = lyrics.replace(deletetxt, "")
+    lyrics = re_sub("\$[0-9]*\[","[", lyrics)
 
     return lyrics
 
