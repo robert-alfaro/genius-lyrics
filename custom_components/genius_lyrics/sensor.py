@@ -3,7 +3,6 @@
 import asyncio
 import logging
 
-# from lyricsgenius import Genius
 from requests.exceptions import HTTPError, Timeout
 
 from homeassistant.components.media_player import (
@@ -11,9 +10,8 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
     # ATTR_MEDIA_DURATION,
     ATTR_MEDIA_TITLE,
-    DOMAIN as MP_DOMAIN,
+    MediaType,
 )
-from homeassistant.components.media_player.const import MEDIA_TYPE_MUSIC
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -39,6 +37,7 @@ from .const import (
     CONF_MONITOR_ALL,
     DOMAIN,
     FETCH_RETRIES,
+    INTEGRATION_NAME,
 )
 from .genius import GeniusPatched
 from .helpers import cleanup_lyrics, get_media_player_entities
@@ -191,7 +190,7 @@ class GeniusLyricsSensor(SensorEntity):
 
         # bail if not playing music content type
         content_type = new_state.attributes.get(ATTR_MEDIA_CONTENT_TYPE)
-        if content_type != MEDIA_TYPE_MUSIC:
+        if content_type != MediaType.MUSIC:
             _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
             return
 
