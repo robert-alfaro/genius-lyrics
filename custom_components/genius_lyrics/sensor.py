@@ -44,7 +44,7 @@ from .const import (
     INTEGRATION_NAME,
 )
 from .genius import GeniusPatched
-from .helpers import cleanup_lyrics, get_media_player_entities
+from .helpers import clean_song_title, cleanup_lyrics, get_media_player_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -115,6 +115,14 @@ class GeniusLyricsSensor(SensorEntity):
         if self._media_artist is None or self._media_title is None:
             _LOGGER.error("Cannot fetch lyrics without artist and title")
             return
+
+        # clean song title to increase chance and accuracy of a result
+        cleaned_title = clean_song_title(self._media_title)
+        if cleaned_title != self._media_title:
+            _LOGGER.info(
+                f'Media title was cleaned: "{self._media_title}"  ->  "{cleaned_title}"'
+            )
+            self._media_title = cleaned_title
 
         _LOGGER.info(
             "Searching lyrics for artist='%s' and title='%s'",
@@ -210,7 +218,14 @@ class GeniusLyricsSensor(SensorEntity):
         # TODO: need to check duration? new_state.attributes.get(ATTR_MEDIA_DURATION)
 
         # bail if media title has not changed
-        if self._media_title == new_state.attributes.get(ATTR_MEDIA_TITLE):
+        old_title = old_state.attributes.get(ATTR_MEDIA_TITLE)
+        new_title = new_state.attributes.get(ATTR_MEDIA_TITLE)
+        _LOGGER.debug(
+            f"_media_title: {self._media_title}, "
+            f"old: {old_title}, "
+            f"new: {new_title}"
+        )
+        if old_title == new_title:
             _LOGGER.debug("Media title has not changed")
             return
 
