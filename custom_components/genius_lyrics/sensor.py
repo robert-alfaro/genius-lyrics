@@ -3,7 +3,6 @@
 import asyncio
 import logging
 
-# from lyricsgenius import Genius
 from requests.exceptions import HTTPError, Timeout
 
 from homeassistant.components.media_player import (
@@ -11,9 +10,8 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
     # ATTR_MEDIA_DURATION,
     ATTR_MEDIA_TITLE,
-    DOMAIN as MP_DOMAIN,
+    MediaType,
 )
-from homeassistant.components.media_player.const import MEDIA_TYPE_MUSIC
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -27,8 +25,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import CoreState, HomeAssistant, State
 from homeassistant.helpers.config_validation import split_entity_id
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
     ATTR_MEDIA_IMAGE,
@@ -39,6 +38,7 @@ from .const import (
     CONF_MONITOR_ALL,
     DOMAIN,
     FETCH_RETRIES,
+    INTEGRATION_NAME,
 )
 from .genius import GeniusPatched
 from .helpers import cleanup_lyrics, get_media_player_entities
@@ -75,6 +75,13 @@ class GeniusLyricsSensor(SensorEntity):
                 "sensor",
                 "lyrics",
             ]
+        )
+        self._attr_device_info = DeviceInfo(
+            configuration_url="https://www.genius.com/",
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._entry.entry_id)},
+            manufacturer=INTEGRATION_NAME,
+            name=INTEGRATION_NAME,
         )
 
         self.reset(update=False)
@@ -191,7 +198,7 @@ class GeniusLyricsSensor(SensorEntity):
 
         # bail if not playing music content type
         content_type = new_state.attributes.get(ATTR_MEDIA_CONTENT_TYPE)
-        if content_type != MEDIA_TYPE_MUSIC:
+        if content_type != MediaType.MUSIC:
             _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
             return
 
@@ -251,7 +258,9 @@ async def async_setup_entry(
 
         # create new sensor & hook up to media_player
         genius_sensor = GeniusLyricsSensor(entry, media_player)
-        async_track_state_change(hass, media_player, genius_sensor.handle_state_change)
+        async_track_state_change_event(
+            hass, media_player, genius_sensor.handle_state_change
+        )
 
         sensors.append(genius_sensor)
 

@@ -4,9 +4,13 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_RESTORED, CONF_ACCESS_TOKEN, CONF_ENTITIES
+from homeassistant.const import (
+    ATTR_RESTORED,
+    CONF_ACCESS_TOKEN,
+    CONF_ENTITIES,
+    Platform,
+)
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 import homeassistant.helpers.config_validation as cv
@@ -24,20 +28,8 @@ from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.Schema(
-            {
-                vol.Required(CONF_ACCESS_TOKEN): cv.string,
-                vol.Optional(CONF_ENTITIES): vol.Any(cv.entity_ids, None),
-            }
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
 
-
-async def notify_user(hass: HomeAssistant, message: str) -> None:
+async def async_notify_user(hass: HomeAssistant, message: str) -> None:
     """Notify the user with a persistent notification."""
     data = {
         "title": INTEGRATION_NAME,
@@ -74,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # any entities to monitor?
     if len(monitored_entities) == 0:
-        _err = f"No {MP_DOMAIN} entities to monitor"
+        _err = f"No {Platform.MEDIA_PLAYER} entities to monitor"
         _LOGGER.error(_err)
         raise ConfigEntryNotReady(_err)
 
@@ -84,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # forward entry setup to platform(s)
-    await hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    await hass.config_entries.async_forward_entry_setup(entry, Platform.SENSOR)
 
     # track entity registry to detect new/removed media_player entities
     async def handle_entity_registry_update(event: Event) -> None:
@@ -92,10 +84,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         entity_id = event.data["entity_id"]
         entity_domain, entity_name = split_entity_id(entity_id)
-        if entity_domain != MP_DOMAIN:
+        if entity_domain != Platform.MEDIA_PLAYER:
             return
 
-        sensor_entity_id = f"sensor.{entity_name}_lyrics"
+        sensor_entity_id = f"{Platform.SENSOR}.{entity_name}_lyrics"
         registry = er.async_get(hass)
         action = event.data["action"]
 
@@ -103,20 +95,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # trigger reload if monitoring all media_player entities
             # otherwise, issue notification about event.
             if monitor_all is True:
-                _LOGGER.debug(f"New {MP_DOMAIN} detected: {entity_name}, reloading...")
+                _LOGGER.debug(
+                    f"New {Platform.MEDIA_PLAYER} detected: {entity_name}, reloading..."
+                )
                 await async_reload_entry(hass, entry)
                 sensor_url = (
                     f"{get_url(hass)}/config/entities?config_entry={entry.entry_id}"
                 )
                 notify_link = f"Auto-configured {sensor_entity_id}, <a href='{sensor_url}'>Check it out</a>."
             else:
-                _LOGGER.debug(f"Ignoring new {MP_DOMAIN}: {entity_name}")
+                _LOGGER.debug(f"Ignoring new {Platform.MEDIA_PLAYER}: {entity_name}")
                 integration_url = (
                     f"{get_url(hass)}/config/integrations/integration/{DOMAIN}"
                 )
                 notify_link = f"<a href='{integration_url}'>Configure</a> {entity_id}."
 
-            await notify_user(
+            await async_notify_user(
                 hass,
                 f"Detected new media player! {notify_link}",
             )
@@ -194,7 +188,9 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a Genius Lyrics config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry, [Platform.SENSOR]
+    )
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
