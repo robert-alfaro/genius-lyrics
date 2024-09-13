@@ -27,7 +27,11 @@ from homeassistant.core import CoreState, HomeAssistant, State
 from homeassistant.helpers.config_validation import split_entity_id
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import (
+    EventStateChangedData,
+    async_track_state_change_event,
+)
+from homeassistant.helpers.typing import EventType
 
 from .const import (
     ATTR_MEDIA_IMAGE,
@@ -174,10 +178,12 @@ class GeniusLyricsSensor(SensorEntity):
             # on exception only
             self.reset()
 
-    async def handle_state_change(
-        self, entity_id: str, old_state: State, new_state: State
-    ):
+    async def handle_state_change(self, event: EventType[EventStateChangedData]):
         """Handle media player state changes to trigger new search."""
+
+        entity_id: str = event.data["entity_id"]
+        old_state: State = event.data["old_state"]
+        new_state: State = event.data["new_state"]
 
         # ensure tracking correct entity_id
         if entity_id != self._media_player_id:
