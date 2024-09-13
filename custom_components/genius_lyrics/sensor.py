@@ -27,7 +27,7 @@ from homeassistant.core import CoreState, HomeAssistant, State
 from homeassistant.helpers.config_validation import split_entity_id
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
     ATTR_MEDIA_IMAGE,
@@ -258,7 +258,9 @@ async def async_setup_entry(
 
         # create new sensor & hook up to media_player
         genius_sensor = GeniusLyricsSensor(entry, media_player)
-        async_track_state_change(hass, media_player, genius_sensor.handle_state_change)
+        async_track_state_change_event(
+            hass, media_player, genius_sensor.handle_state_change
+        )
 
         sensors.append(genius_sensor)
 
