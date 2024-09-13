@@ -25,6 +25,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import CoreState, HomeAssistant, State
 from homeassistant.helpers.config_validation import split_entity_id
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change
 
@@ -74,6 +75,13 @@ class GeniusLyricsSensor(SensorEntity):
                 "sensor",
                 "lyrics",
             ]
+        )
+        self._attr_device_info = DeviceInfo(
+            configuration_url="https://www.genius.com/",
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self._entry.entry_id)},
+            manufacturer=INTEGRATION_NAME,
+            name=INTEGRATION_NAME,
         )
 
         self.reset(update=False)
