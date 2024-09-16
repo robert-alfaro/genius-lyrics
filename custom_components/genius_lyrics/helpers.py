@@ -48,6 +48,14 @@ def cleanup_lyrics(song: Song) -> str:
     # Pattern3: match ending with Pyong Count
     lyrics = lyrics.rstrip(str(song.pyongs_count))
 
+    # Pattern4: match "See [artist] LiveGet tickets as low as $[price]"
+    pattern4 = rf"See {song.artist} LiveGet tickets as low as \$\d+"
+    lyrics = re.sub(pattern4, "", lyrics)
+
+    # Pattern5: match "You might also like" not followed by whitespace
+    pattern5 = r"You might also like(?!\s)"
+    lyrics = re.sub(pattern5, "", lyrics)
+
     return lyrics
 
 
