@@ -3,7 +3,11 @@
 import asyncio
 import logging
 
-from requests.exceptions import HTTPError, Timeout
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    HTTPError,
+    Timeout,
+)
 
 from homeassistant.components.media_player import (
     ATTR_MEDIA_ARTIST,
@@ -175,9 +179,9 @@ class GeniusLyricsSensor(SensorEntity):
                 _LOGGER.error(
                     f"Timeout fetching lyrics ({self._genius.retries} retries)"
                 )
-            except HTTPError as e:
+            except (HTTPError, RequestsConnectionError) as e:
                 _LOGGER.error(
-                    f"HTTP error fetching lyrics ({self._genius.retries} retries), err: {e.strerror}"
+                    f"Error fetching lyrics ({self._genius.retries} retries), err: {e.strerror}"
                 )
             else:
                 return
