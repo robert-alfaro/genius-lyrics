@@ -39,17 +39,22 @@ def cleanup_lyrics(song: Song) -> str:
     """Clean lyrics string hackishly remove erroneous text that may appear."""
 
     # Pattern1: match digits at beginning followed by "Contributors" and text followed by "Lyrics"
-    pattern1 = re.compile(r"^(\d+) Contributors(.*?) Lyrics")
-    match = pattern1.match(song.lyrics)
-    if match:
-        # Remove the matched patterns from the original text
-        lyrics = song.lyrics.replace(match.group(0), "")
+    pattern1 = r"^(\d+) Contributor(.*?) Lyrics"
+    lyrics = re.sub(pattern1, "", song.lyrics, flags=re.DOTALL)
 
     # Pattern2: match ending with "Embed"
     lyrics = lyrics.rstrip("Embed")
 
     # Pattern3: match ending with Pyong Count
     lyrics = lyrics.rstrip(str(song.pyongs_count))
+
+    # Pattern4: match "See [artist] LiveGet tickets as low as $[price]"
+    pattern4 = rf"See {song.artist} LiveGet tickets as low as \$\d+"
+    lyrics = re.sub(pattern4, "", lyrics)
+
+    # Pattern5: match "You might also like" not followed by whitespace
+    pattern5 = r"You might also like(?!\s)"
+    lyrics = re.sub(pattern5, "", lyrics)
 
     return lyrics
 
