@@ -129,17 +129,30 @@ class GeniusLyricsSensor(SensorEntity):
             self._media_title = cleaned_title
 
         _LOGGER.info(
-            "Searching lyrics for artist='%s' and title='%s'",
-            self._media_artist,
-            self._media_title,
+            f"Searching lyrics for artist='{self._media_artist}' and title='{self._media_title}'"
         )
+
+        # perform search
+        song = self._genius.search_song(
+            self._media_title, self._media_artist, get_full_info=False
+        )
+
+        # second search needed?
+        if not song and " - " in self._media_title:
+            # aggressively truncate title from the first hyphen
+            self._media_title = self._media_title.split(" - ", 1)[0]
+            _LOGGER.info(
+                f"Second attempt, aggressively cleaned title='{self._media_title}'"
+            )
+
+            # perform search
+            song = self._genius.search_song(
+                self._media_title, self._media_artist, get_full_info=False
+            )
 
         self._attr_extra_state_attributes[ATTR_MEDIA_ARTIST] = self._media_artist
         self._attr_extra_state_attributes[ATTR_MEDIA_TITLE] = self._media_title
 
-        song = self._genius.search_song(
-            self._media_title, self._media_artist, get_full_info=False
-        )
         if song:
             _LOGGER.debug(
                 "Found song: artist = %s, title = %s", song.artist, song.title
