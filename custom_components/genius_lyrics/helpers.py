@@ -16,7 +16,7 @@ def clean_song_title(song_title):
     """Clean song title string by removing metadata that may appear."""
 
     # Keywords to look for in parentheses, brackets, or after a hyphen
-    keywords = r"(remaster(?:ed)?|anniversary|instrumental|live|edition|single(s)?|stereo|album|radio|edit|version|feat(?:uring)?)"
+    keywords = r"(remaster(?:ed)?|anniversary|instrumental|live|edit(?:ion)?|single(s)?|stereo|album|radio|version|feat(?:uring)?|mix|bonus)"
 
     # Regex pattern to match metadata within parentheses or brackets
     paren_bracket_pattern = rf"[\(\[][^\)\]]*\b({keywords})\b[^\)\]]*[\)\]]"
