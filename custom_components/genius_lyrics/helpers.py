@@ -3,7 +3,7 @@
 import logging
 import re
 
-from lyricsgenius.song import Song
+from lyricsgenius.types import Song
 
 from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
 from homeassistant.const import ATTR_RESTORED

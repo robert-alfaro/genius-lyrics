@@ -3,7 +3,7 @@
   "name": "Genius Lyrics",
   "documentation": "https://github.com/robert-alfaro/genius-lyrics",
   "codeowners": ["@ralfaro"],
-  "requirements": ["lyricsgenius==3.0.1"],
+  "requirements": ["lyricsgenius==3.2.0"],
   "dependencies": [],
   "config_flow": true,
   "integration_type": "service",
