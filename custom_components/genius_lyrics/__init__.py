@@ -28,6 +28,8 @@ from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS = [Platform.SENSOR]
+
 
 async def async_notify_user(hass: HomeAssistant, message: str) -> None:
     """Notify the user with a persistent notification."""
@@ -76,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # forward entry setup to platform(s)
-    await hass.config_entries.async_forward_entry_setup(entry, Platform.SENSOR)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # track entity registry to detect new/removed media_player entities
     async def handle_entity_registry_update(event: Event) -> None:
