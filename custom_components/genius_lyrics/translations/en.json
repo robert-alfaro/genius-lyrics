@@ -26,5 +26,25 @@
                 "description": "Select media players to monitor for lyrics."
             }
         }
+    },
+    "services": {
+        "search_lyrics": {
+            "name": "Search Lyrics",
+            "description": "Fetch song lyrics from Genius.com",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity",
+                    "description": "Sensor entity id to attach song data."
+                },
+                "media_artist": {
+                    "name": "Artist",
+                    "description": "Name of the artist."
+                },
+                "media_title": {
+                    "name": "Title",
+                    "description": "Name of the song."
+                }
+            }
+        }
     }
 }
