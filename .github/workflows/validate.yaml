@@ -2,7 +2,10 @@ name: Validate
 
 on:
   push:
-    branches-ignore: ['*']
+    branches:
+      - master
+      - main
+      - dev
     tags: ['*']
   pull_request:
   workflow_dispatch:
