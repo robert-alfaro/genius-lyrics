@@ -16,13 +16,15 @@
         }
     },
     "options": {
-        "init": {
-            "data": {
-                "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
+        "step": {
+            "init": {
+                "data": {
+                    "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
+                }
+            },
+            "select_entities": {
+                "description": "Select media players to monitor for lyrics."
             }
-        },
-        "select_entities": {
-            "description": "Select media players to monitor for lyrics."
         }
     }
 }

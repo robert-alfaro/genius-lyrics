@@ -1,13 +1,15 @@
 search_lyrics:
-  description: >
-    Fetch song lyrics from Genius.com
+  name: "Search lyrics"
   fields:
     entity_id:
-      description: Sensor entity id to attach song data.
-      example: sensor.foobar_lyrics
+      required: true
+      example: "sensor.foobar_lyrics"
+      default: ""
     media_artist:
-      description: Name of the Artist.
-      example: Protoje
+      required: true
+      example: "Protoje"
+      default: ""
     media_title:
-      description: Name of the Song.
-      example: 'Mind of a King'
+      required: true
+      example: "Mind of a King"
+      default: ""
