@@ -15,17 +15,15 @@ from homeassistant.components.media_player import (
     # ATTR_MEDIA_DURATION,
     ATTR_MEDIA_TITLE,
     MediaType,
+    MediaPlayerState,
 )
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_ENTITIES,
     EVENT_HOMEASSISTANT_STARTED,
-    STATE_BUFFERING,
     STATE_OFF,
     STATE_ON,
-    STATE_PAUSED,
-    STATE_PLAYING,
 )
 from homeassistant.core import CoreState, HomeAssistant, State
 from homeassistant.helpers.config_validation import split_entity_id
@@ -165,12 +163,12 @@ class GeniusLyricsSensor(SensorEntity):
 
             self._attr_extra_state_attributes[ATTR_MEDIA_LYRICS] = lyrics
             self._attr_extra_state_attributes[ATTR_MEDIA_STATS_HOT] = song.stats.hot
-            self._attr_extra_state_attributes[
-                ATTR_MEDIA_PYONG_COUNT
-            ] = song.pyongs_count
-            self._attr_extra_state_attributes[
-                ATTR_MEDIA_IMAGE
-            ] = song.song_art_image_thumbnail_url
+            self._attr_extra_state_attributes[ATTR_MEDIA_PYONG_COUNT] = (
+                song.pyongs_count
+            )
+            self._attr_extra_state_attributes[ATTR_MEDIA_IMAGE] = (
+                song.song_art_image_thumbnail_url
+            )
             self._attr_entity_picture = song.song_art_image_thumbnail_url
             self._state = STATE_ON
             return True
@@ -209,8 +207,14 @@ class GeniusLyricsSensor(SensorEntity):
         old_state: State = event.data["old_state"]
         new_state: State = event.data["new_state"]
 
+        _LOGGER.debug(f"old_state: {old_state}")
+        _LOGGER.debug(f"new_state: {new_state}")
+
         # ensure tracking correct entity_id
         if entity_id != self._media_player_id:
+            _LOGGER.error(
+                f"Mismatch in tracked entity_id! {entity_id} != {self._media_player_id}"
+            )
             return
 
         if new_state is None:
@@ -222,7 +226,15 @@ class GeniusLyricsSensor(SensorEntity):
             return
 
         # ensure a state containing necessary query inputs
-        if new_state.state not in [STATE_PLAYING, STATE_PAUSED, STATE_BUFFERING]:
+        if new_state.state not in [
+            MediaPlayerState.IDLE,
+            MediaPlayerState.PLAYING,
+            MediaPlayerState.PAUSED,
+            MediaPlayerState.BUFFERING,
+        ]:
+            _LOGGER.debug(
+                f"Ignoring new player state: {MediaPlayerState(new_state.state)}"
+            )
             self.reset()
             return
 
@@ -235,12 +247,13 @@ class GeniusLyricsSensor(SensorEntity):
         # TODO: need to check duration? new_state.attributes.get(ATTR_MEDIA_DURATION)
 
         # bail if media title has not changed
-        old_title = old_state.attributes.get(ATTR_MEDIA_TITLE)
+        if old_state is not None and hasattr(old_state, "attributes"):
+            old_title = old_state.attributes.get(ATTR_MEDIA_TITLE)
+        else:
+            old_title = None
         new_title = new_state.attributes.get(ATTR_MEDIA_TITLE)
         _LOGGER.debug(
-            f"_media_title: {self._media_title}, "
-            f"old: {old_title}, "
-            f"new: {new_title}"
+            f"_media_title: {self._media_title}, old: {old_title}, new: {new_title}"
         )
         if old_title == new_title:
             _LOGGER.debug("Media title has not changed")
