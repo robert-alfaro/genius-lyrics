@@ -240,7 +240,9 @@ class GeniusLyricsSensor(SensorEntity):
 
         # bail if not playing music content type
         content_type = new_state.attributes.get(ATTR_MEDIA_CONTENT_TYPE)
-        if content_type != MediaType.MUSIC:
+        # NOTE: adding playlist type here as this is a valid provider of music tracks.
+        #  For playlists, there is no differentiation between music and non-music -- results may vary.
+        if content_type not in [MediaType.MUSIC, MediaType.PLAYLIST]:
             _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
             return
 
