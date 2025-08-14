@@ -24,7 +24,7 @@ Home Assistant installation's `custom_components` directory.
 
     [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=genius_lyrics)
 
-3. Create markdown card in lovelace. All created sensors are named after the media player and appended with `_lyrics`.
+3. Create markdown card in lovelace. All created sensor are named with the following format: `sensor.genius_lyrics_<media player name>_lyrics`.
 
     >*Below, media player `foobar` is just an example. Replace it with your media player's entity name.*
    
@@ -35,17 +35,17 @@ Home Assistant installation's `custom_components` directory.
        entity: media_player.foobar
      - type: conditional
        conditions:
-         - entity: sensor.foobar_lyrics
+         - entity: sensor.genius_lyrics_foobar_lyrics
            state: "on"
        card:
          type: markdown
          content: >-
            ![image]({{
-           states.sensor.foobar_lyrics.attributes.media_image }})
+           states.sensor.genius_lyrics_foobar_lyrics.attributes.media_image }})
    
-           ## {{ states.sensor.foobar_lyrics.attributes.media_artist }} - {{ states.sensor.foobar_lyrics.attributes.media_title }}
+           ## {{ states.sensor.genius_lyrics_foobar_lyrics.attributes.media_artist }} - {{ states.sensor.genius_lyrics_foobar_lyrics.attributes.media_title }}
    
-           {{ states.sensor.foobar_lyrics.attributes.media_lyrics }}
+           {{ states.sensor.genius_lyrics_foobar_lyrics.attributes.media_lyrics }}
    ```
 
    The above lovelace card groups the media player and lyrics sensor together.
@@ -61,7 +61,7 @@ Service optionally accepts `entity_id`. Returns response when omitted, otherwise
 {
   "media_artist": "Protoje",
   "media_title": "Mind of a King",
-  "entity_id": "sensor.foobar_lyrics"
+  "entity_id": "sensor.genius_lyrics_foobar_lyrics"
 }
 ```
 
@@ -70,7 +70,7 @@ Service optionally accepts `entity_id`. Returns response when omitted, otherwise
 ```yaml
 media_artist: "Protoje"
 media_title: "Mind of a King"
-entity_id: sensor.foobar_lyrics
+entity_id: sensor.genius_lyrics_foobar_lyrics
 ```
 
 ## Screenshot
