@@ -104,8 +104,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         action = event.data["action"]
 
         if action == "create":
+            # skip player entity if already tracked in monitored_entities
+            if entity_id in monitored_entities:
+                _LOGGER.debug(
+                    f"Skipping already configured {Platform.MEDIA_PLAYER}: {entity_name}"
+                )
+                return
+
             # trigger reload if monitoring all media_player entities
-            # otherwise, issue notification about event.
+            # otherwise, let user manage configuration.
             if monitor_all is True:
                 _LOGGER.info(
                     f"Creating sensor for new {Platform.MEDIA_PLAYER}: {entity_name}, reloading..."
