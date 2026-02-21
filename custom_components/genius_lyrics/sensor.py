@@ -232,9 +232,7 @@ class GeniusLyricsSensor(SensorEntity):
             MediaPlayerState.PAUSED,
             MediaPlayerState.BUFFERING,
         ]:
-            _LOGGER.debug(
-                f"Ignoring new player state: {MediaPlayerState(new_state.state)}"
-            )
+            _LOGGER.debug(f"Ignoring new player state: {new_state.state}")
             self.reset()
             return
 
@@ -243,7 +241,7 @@ class GeniusLyricsSensor(SensorEntity):
         # NOTE: adding playlist type here as this is a valid provider of music tracks.
         #  For playlists, there is no differentiation between music and non-music -- results may vary.
         if content_type not in [MediaType.MUSIC, MediaType.PLAYLIST]:
-            _LOGGER.warning(f"Ignoring non-music content type: {content_type}")
+            _LOGGER.debug(f"Ignoring non-music content type: {content_type}")
             return
 
         # TODO: need to check duration? new_state.attributes.get(ATTR_MEDIA_DURATION)
