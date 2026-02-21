@@ -12,7 +12,7 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_MONITOR_ALL, DOMAIN, INTEGRATION_NAME
+from .const import CONF_MONITOR_ALL, CONF_NOTIFY_NEW_PLAYERS, DOMAIN, INTEGRATION_NAME
 from .helpers import get_media_player_entities
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,9 +23,13 @@ def _initial_form(flow: Union[ConfigFlow, OptionsFlow]):
     if isinstance(flow, ConfigFlow):
         step_id = "user"
         monitor_all = True
+        notify_new_players = True
     elif isinstance(flow, OptionsFlow):
         step_id = "init"
         monitor_all = flow.config_entry.options.get(CONF_MONITOR_ALL, True)
+        notify_new_players = flow.config_entry.options.get(
+            CONF_NOTIFY_NEW_PLAYERS, True
+        )
     else:
         raise TypeError("Invalid flow type")
 
@@ -34,6 +38,9 @@ def _initial_form(flow: Union[ConfigFlow, OptionsFlow]):
         data_schema=vol.Schema(
             {
                 vol.Optional(CONF_MONITOR_ALL, default=monitor_all): cv.boolean,
+                vol.Optional(
+                    CONF_NOTIFY_NEW_PLAYERS, default=notify_new_players
+                ): cv.boolean,
             }
         ),
         # TODO: would be nice to dynamically adjust per checkbox value on form

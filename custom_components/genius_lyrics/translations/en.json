@@ -4,7 +4,8 @@
             "user": {
                 "description": "Set up Genius.com to allow song lyrics search.",
                 "data": {
-                    "monitor_all": "Monitor All Media Player entities"
+                    "monitor_all": "Monitor All Media Player entities",
+                    "notify_new_players": "Enable notifications of new media players"
                 }
             },
             "select_entities": {
@@ -19,7 +20,8 @@
         "step": {
             "init": {
                 "data": {
-                    "monitor_all": "Monitor All Media Player entities"
+                    "monitor_all": "Monitor All Media Player entities",
+                    "notify_new_players": "Enable notifications of new media players"
                 }
             },
             "select_entities": {

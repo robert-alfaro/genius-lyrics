@@ -22,7 +22,7 @@ from homeassistant.helpers.entity_registry import (
 )
 from homeassistant.helpers.network import get_url
 
-from .const import CONF_MONITOR_ALL, DOMAIN, INTEGRATION_NAME
+from .const import CONF_MONITOR_ALL, CONF_NOTIFY_NEW_PLAYERS, DOMAIN, INTEGRATION_NAME
 from .helpers import get_media_player_entities
 from .services import async_setup_services
 
@@ -49,6 +49,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         monitor_all = entry.data[CONF_MONITOR_ALL]
 
+    # notifications for new media players (default True)
+    if CONF_NOTIFY_NEW_PLAYERS in entry.options:
+        notify_new_players = entry.options[CONF_NOTIFY_NEW_PLAYERS]
+    else:
+        notify_new_players = entry.data.get(CONF_NOTIFY_NEW_PLAYERS, True)
+
     if monitor_all is True:
         monitored_entities = get_media_player_entities(hass)
         user_selected_entities = []
@@ -63,7 +69,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # store options
     hass.config_entries.async_update_entry(
         entry,
-        options={CONF_MONITOR_ALL: monitor_all, CONF_ENTITIES: user_selected_entities},
+        options={
+            CONF_MONITOR_ALL: monitor_all,
+            CONF_ENTITIES: user_selected_entities,
+            CONF_NOTIFY_NEW_PLAYERS: notify_new_players,
+        },
     )
 
     # any entities to monitor?
@@ -97,8 +107,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # trigger reload if monitoring all media_player entities
             # otherwise, issue notification about event.
             if monitor_all is True:
-                _LOGGER.debug(
-                    f"New {Platform.MEDIA_PLAYER} detected: {entity_name}, reloading..."
+                _LOGGER.info(
+                    f"Creating sensor for new {Platform.MEDIA_PLAYER}: {entity_name}, reloading..."
                 )
                 await async_reload_entry(hass, entry)
                 sensor_url = (
@@ -112,10 +122,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
                 notify_link = f"<a href='{integration_url}'>Configure</a> {entity_id}."
 
-            await async_notify_user(
-                hass,
-                f"Detected new media player! {notify_link}",
-            )
+            # only send notifications when option is enabled
+            if entry.options.get(CONF_NOTIFY_NEW_PLAYERS):
+                await async_notify_user(
+                    hass, f"Detected new media player! {notify_link}"
+                )
+            else:
+                _LOGGER.debug("New player notifications are disabled")
 
         elif action == "remove":
             # remove sensor for a monitored media_player entity

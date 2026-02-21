@@ -13,6 +13,7 @@ ATTR_MEDIA_PYONG_COUNT = "media_pyong_count"
 SERVICE_SEARCH_LYRICS = "search_lyrics"
 
 CONF_MONITOR_ALL = "monitor_all"
+CONF_NOTIFY_NEW_PLAYERS = "notify_new_players"
 
 DATA_GENIUS_CLIENT = "genius_client"
 

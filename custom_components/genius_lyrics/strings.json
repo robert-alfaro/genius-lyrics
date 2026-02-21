@@ -4,7 +4,8 @@
             "user": {
                 "description": "Set up Genius.com to allow song lyrics search.",
                 "data": {
-                    "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
+                    "monitor_all": "[%key:common::config_flow::data::monitor_all%]",
+                    "notify_new_players": "[%key:common::config_flow::data::notify_new_players%]"
                 }
             },
             "select_entities": {
@@ -19,7 +20,8 @@
         "step": {
             "init": {
                 "data": {
-                    "monitor_all": "[%key:common::config_flow::data::monitor_all%]"
+                    "monitor_all": "[%key:common::config_flow::data::monitor_all%]",
+                    "notify_new_players": "[%key:common::config_flow::data::notify_new_players%]"
                 }
             },
             "select_entities": {
