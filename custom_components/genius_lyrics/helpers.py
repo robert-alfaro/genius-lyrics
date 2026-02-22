@@ -56,6 +56,10 @@ def cleanup_lyrics(song: Song) -> str:
     pattern5 = r"You might also like(?!\s)"
     lyrics = re.sub(pattern5, "", lyrics)
 
+    # Pattern6: match "… Read More" section
+    pattern6 = r"(^.*\n*)?(.*…\sRead More\s)"
+    lyrics = re.sub(pattern6, "", lyrics, flags=re.DOTALL)
+
     return lyrics
 
 
