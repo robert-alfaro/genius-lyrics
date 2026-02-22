@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import threading
 
 from requests.exceptions import (
     ConnectionError as RequestsConnectionError,
@@ -69,6 +70,12 @@ class GeniusLyricsSensor(SensorEntity):
         )
         self._media_player_id = media_entity_id
 
+        # guard against concurrent fetches
+        self._lock = threading.Lock()
+
+        # remember the last artist/title we searched for (normalized)
+        self._last_query: tuple[str, str] | None = None
+
         media_player_name = split_entity_id(media_entity_id)[1]
         cleaned_name = media_player_name.replace("_", " ").capitalize()
         self._attr_name = f"{cleaned_name} lyrics"
@@ -104,6 +111,7 @@ class GeniusLyricsSensor(SensorEntity):
         self._attr_extra_state_attributes[ATTR_MEDIA_IMAGE] = None
         self._attr_extra_state_attributes[ATTR_MEDIA_PYONG_COUNT] = None
         self._attr_extra_state_attributes[ATTR_MEDIA_STATS_HOT] = None
+        self._last_query = None
         _LOGGER.debug("Sensor data is now reset")
         if update:
             self.async_schedule_update_ha_state(True)
@@ -117,6 +125,12 @@ class GeniusLyricsSensor(SensorEntity):
         if self._media_artist is None or self._media_title is None:
             _LOGGER.error("Cannot fetch lyrics without artist and title")
             return
+
+        # store normalized query to avoid repeating the same search
+        self._last_query = (
+            self._media_artist.lower(),
+            self._media_title.lower(),
+        )
 
         # clean song title to increase chance and accuracy of a result
         cleaned_title = clean_song_title(self._media_title)
@@ -182,8 +196,32 @@ class GeniusLyricsSensor(SensorEntity):
         return False
 
     def update(self):
-        """Fetch new state data for the sensor."""
-        if self.state == STATE_ON:
+        """Fetch new state data for the sensor.
+
+        Guard against concurrent updates and avoid re-fetching when lyrics are
+        already available for the current track.
+        """
+        # skip when no work to do
+        if self.state != STATE_ON:
+            return
+
+        # don't spam the API if we've already fetched valid lyrics
+        existing_lyrics = self._attr_extra_state_attributes.get(ATTR_MEDIA_LYRICS)
+        if existing_lyrics not in (None, "Lyrics not found"):
+            _LOGGER.debug("Lyrics already cached, skipping fetch")
+            return
+
+        # prevent re-entry from multiple update requests
+        if self._lock.locked():
+            _LOGGER.debug("Update already in progress, skipping")
+            return
+
+        # ensure only one fetch at a time
+        if not self._lock.acquire(blocking=False):
+            # should not happen due to previous check, but be paranoid
+            _LOGGER.debug("Lock busy despite inspection, skipping")
+            return
+        try:
             try:
                 self._fetch_lyrics()
             except Timeout:
@@ -199,6 +237,8 @@ class GeniusLyricsSensor(SensorEntity):
 
             # on exception only
             self.reset()
+        finally:
+            self._lock.release()
 
     async def handle_state_change(self, event: EventStateChangedData):
         """Handle media player state changes to trigger new search."""
@@ -251,17 +291,31 @@ class GeniusLyricsSensor(SensorEntity):
             old_title = old_state.attributes.get(ATTR_MEDIA_TITLE)
         else:
             old_title = None
+
         new_title = new_state.attributes.get(ATTR_MEDIA_TITLE)
         _LOGGER.debug(
             f"_media_title: {self._media_title}, old: {old_title}, new: {new_title}"
         )
-        if old_title == new_title:
+
+        if new_title is None:
+            _LOGGER.debug("Media title is None, skipping")
+            self.reset()
+            return
+
+        if old_title == new_title and self._media_title == new_title:
             _LOGGER.debug("Media title has not changed")
             return
 
+        # check normalized query, bail if unchanged
+        new_artist = new_state.attributes.get(ATTR_MEDIA_ARTIST)
+        new_query: tuple[str, str] = (new_artist.lower(), new_title.lower())
+        if new_query == self._last_query:
+            _LOGGER.debug("Media artist/title has not changed (normalized)")
+            return
+
         # all checks out..update artist and title to fetch
-        self._media_artist = new_state.attributes.get(ATTR_MEDIA_ARTIST)
-        self._media_title = new_state.attributes.get(ATTR_MEDIA_TITLE)
+        self._media_artist = new_artist
+        self._media_title = new_title
         self._attr_extra_state_attributes[ATTR_MEDIA_LYRICS] = None
         self._attr_entity_picture = None
         self._state = STATE_ON
