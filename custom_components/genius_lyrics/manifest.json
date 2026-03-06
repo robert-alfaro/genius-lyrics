@@ -1,6 +1,7 @@
 {
   "domain": "genius_lyrics",
   "name": "Genius Lyrics",
+  "after_dependencies": ["lovelace"],
   "codeowners": ["@robert-alfaro"],
   "config_flow": true,
   "dependencies": [],
