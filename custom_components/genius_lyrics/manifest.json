@@ -1,7 +1,7 @@
 {
   "domain": "genius_lyrics",
   "name": "Genius Lyrics",
-  "codeowners": ["@ralfaro"],
+  "codeowners": ["@robert-alfaro"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/robert-alfaro/genius-lyrics",
