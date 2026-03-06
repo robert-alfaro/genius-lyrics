@@ -2,6 +2,9 @@
 
 INTEGRATION_NAME = "Genius Lyrics"
 DOMAIN = "genius_lyrics"
+CARD_RESOURCE_DIR = DOMAIN
+CARD_FILENAME = "genius-lyrics-card.js"
+SERVICE_REGISTER_CARD_RESOURCES = "register_card_resources"
 
 ATTRIBUTION = "Data provided by Genius.com"
 

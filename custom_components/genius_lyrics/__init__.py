@@ -9,6 +9,7 @@ from homeassistant.const import (
     ATTR_RESTORED,
     CONF_ACCESS_TOKEN,
     CONF_ENTITIES,
+    EVENT_HOMEASSISTANT_STARTED,
     Platform,
 )
 from homeassistant.core import Event, HomeAssistant
@@ -22,13 +23,25 @@ from homeassistant.helpers.entity_registry import (
 )
 from homeassistant.helpers.network import get_url
 
-from .const import CONF_MONITOR_ALL, CONF_NOTIFY_NEW_PLAYERS, DOMAIN, INTEGRATION_NAME
+from .const import (
+    CONF_MONITOR_ALL,
+    CONF_NOTIFY_NEW_PLAYERS,
+    DOMAIN,
+    INTEGRATION_NAME,
+)
 from .helpers import get_media_player_entities
 from .services import async_setup_services
+from .www_manager import (
+    async_register_cards,
+    async_register_resources_service,
+    async_setup_cards,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.SENSOR]
+DATA_CARD_SETUP_DONE = "card_setup_done"
+LOADED_ENTRIES = "loaded_entries"
 
 
 async def async_notify_user(hass: HomeAssistant, message: str) -> None:
@@ -42,6 +55,25 @@ async def async_notify_user(hass: HomeAssistant, message: str) -> None:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Genius Lyrics from a config entry."""
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if LOADED_ENTRIES not in domain_data:
+        domain_data[LOADED_ENTRIES] = 0
+
+    if not domain_data.get(DATA_CARD_SETUP_DONE):
+        await async_setup_cards(hass)
+        await async_register_resources_service(hass)
+
+        async def _auto_register_resources(_event=None) -> None:
+            await async_register_cards(hass)
+
+        if hass.is_running:
+            await _auto_register_resources()
+        else:
+            hass.bus.async_listen_once(
+                EVENT_HOMEASSISTANT_STARTED, _auto_register_resources
+            )
+
+        domain_data[DATA_CARD_SETUP_DONE] = True
 
     # prefer options
     if CONF_MONITOR_ALL in entry.options:
@@ -82,7 +114,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error(_err)
         raise ConfigEntryNotReady(_err)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {}
+    domain_data[entry.entry_id] = {}
+    domain_data[LOADED_ENTRIES] += 1
 
     # listen for options updates
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -207,6 +240,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry, [Platform.SENSOR]
     )
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        domain_data = hass.data[DOMAIN]
+        domain_data.pop(entry.entry_id)
+        if domain_data.get(LOADED_ENTRIES, 0) > 0:
+            domain_data[LOADED_ENTRIES] -= 1
 
     return unload_ok

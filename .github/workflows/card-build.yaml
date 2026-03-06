@@ -1,0 +1,34 @@
+name: Card Build
+
+on:
+  push:
+    paths:
+      - "genius-lyrics-card/**"
+      - "custom_components/genius_lyrics/www/**"
+      - ".github/workflows/card-build.yaml"
+  pull_request:
+    paths:
+      - "genius-lyrics-card/**"
+      - "custom_components/genius_lyrics/www/**"
+      - ".github/workflows/card-build.yaml"
+  workflow_dispatch:
+
+jobs:
+  build-card:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genius-lyrics-card
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm install
+      - name: Build card
+        run: npm run build
+      - name: Verify bundled integration asset is updated
+        run: |
+          cp dist/genius-lyrics-card.js ../custom_components/genius_lyrics/www/genius-lyrics-card.js
+          git diff --exit-code ../custom_components/genius_lyrics/www/genius-lyrics-card.js

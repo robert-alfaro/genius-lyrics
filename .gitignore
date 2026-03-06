@@ -1,1 +1,38 @@
 .idea/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Python (custom_components integrations)
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+build/
+*.egg-info/
+
+# Node/frontend (Lovelace cards)
+**/node_modules/
+**/.npm/
+**/.pnpm-store/
+**/.cache/
+**/coverage/
+**/*.tsbuildinfo
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
